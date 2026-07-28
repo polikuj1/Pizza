@@ -1,0 +1,56 @@
+export interface MenuItem {
+  id: string;
+  zh: string;
+  en: string;
+  description: string;
+  price: number;
+  category: string;
+  hasTemp: boolean;
+}
+
+export interface Category {
+  id: string;
+  label: string;
+}
+
+export interface OrderLine {
+  id: string;
+  zh: string;
+  qty: number;
+  cheese: boolean;
+  temp: 'ice' | 'hot';
+  unitPrice: number;
+  lineTotal: number;
+  cheeseSuffix: string;
+  tempSuffix: string;
+}
+
+export interface Order {
+  id: number;
+  items: OrderLine[];
+  total: number;
+  customerName: string;
+  customerPhone: string;
+  note: string;
+  payment: 'store' | 'online';
+  status: number;
+  orderType: 'online' | 'dinein' | 'takeout';
+  table: number | null;
+  createdAt: string;
+  servedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface AppConfig {
+  cheeseUpcharge: number;
+  pickupEstimateMinutes: number;
+  storeOpen: boolean;
+}
+
+export interface CartLineState {
+  qty: number;
+  cheese: boolean;
+  temp: 'ice' | 'hot';
+}
+
+export type Cart = Record<string, CartLineState>;

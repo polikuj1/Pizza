@@ -1,0 +1,47 @@
+body {
+  margin: 0;
+}
+* {
+  box-sizing: border-box;
+  font-family: 'Noto Sans TC', sans-serif;
+}
+input,
+textarea,
+select,
+button {
+  font-family: 'Noto Sans TC', sans-serif;
+}
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+a {
+  color: #e8384f;
+}
+a:hover {
+  color: #c22339;
+}
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(26, 26, 26, 0.25);
+  border-radius: 4px;
+}
+.brand-text {
+  font-family: 'ZCOOL KuaiLe', sans-serif;
+  color: #e8384f;
+  -webkit-text-stroke: 1px #1a1a1a;
+}
