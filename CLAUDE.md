@@ -99,7 +99,7 @@ Express + TypeScript，直接用 `pg` 下 SQL（無 ORM）。
 
 帳密存在 `users` 表，密碼以 `crypto.scrypt` 雜湊（非明文、非套件 bcrypt）。登入成功後簽發 httpOnly cookie（`staff_session`，12 小時效期，內容為 `<userId>.<expiresAt>.<hmac 簽章>`，`SESSION_SECRET` 需在正式環境更換）。`requirePermission(key)` 從 cookie 解出 `userId` 後查 DB 取即時權限（權限變更立即生效，不用重新登入）。種子帳號 `staff`（密碼見團隊內部密碼管理工具，或 `migrations/002_users.sql` 建置當下的紀錄）擁有全部權限，正式環境上線前務必更換密碼。
 
-若正式環境前後端部署在不同網域，需把 cookie 改成 `sameSite: 'none'; secure: true`（目前為了本機開發用 http，設定是 `sameSite: 'lax'`）。
+Cookie 屬性依 `NODE_ENV` 切換（`routes/auth.ts` 的 `SESSION_COOKIE_OPTIONS`）：本機開發是 `sameSite: 'lax'`／`secure: false`；`NODE_ENV=production` 時自動變成 `sameSite: 'none'`／`secure: true`，供前後端部署在不同網域時使用。
 
 ## 啟動
 

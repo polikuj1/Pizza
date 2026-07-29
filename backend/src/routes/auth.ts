@@ -5,6 +5,14 @@ import { createSessionToken, getSessionUserId, SESSION_COOKIE, verifyPassword } 
 
 export const authRouter = Router();
 
+// 前後端部署在不同網域（如 Render 後端 + 其他平台前端）時，cookie 需要 sameSite: 'none' 才會被跨站帶上
+const isProd = process.env.NODE_ENV === 'production';
+const SESSION_COOKIE_OPTIONS: { httpOnly: boolean; sameSite: 'none' | 'lax'; secure: boolean } = {
+  httpOnly: true,
+  sameSite: isProd ? 'none' : 'lax',
+  secure: isProd,
+};
+
 authRouter.post(
   '/login',
   ah(async (req, res) => {
@@ -16,18 +24,13 @@ authRouter.post(
     if (!user || !verifyPassword(String(password ?? ''), user.password_hash)) {
       return res.status(401).json({ error: '帳號或密碼錯誤' });
     }
-    res.cookie(SESSION_COOKIE, createSessionToken(user.id), {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 12 * 60 * 60 * 1000,
-    });
+    res.cookie(SESSION_COOKIE, createSessionToken(user.id), { ...SESSION_COOKIE_OPTIONS, maxAge: 12 * 60 * 60 * 1000 });
     res.json({ ok: true, permissions: user.permissions });
   })
 );
 
 authRouter.post('/logout', (_req, res) => {
-  res.clearCookie(SESSION_COOKIE);
+  res.clearCookie(SESSION_COOKIE, SESSION_COOKIE_OPTIONS);
   res.json({ ok: true });
 });
 
