@@ -12,6 +12,8 @@ const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
 app.use('/api/config', configRouter);
 app.use('/api/menu', menuRouter);
 app.use('/api/orders', ordersRouter);

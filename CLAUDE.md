@@ -60,6 +60,7 @@ Express + TypeScript，直接用 `pg` 下 SQL（無 ORM）。
 
 | Method | 路徑 | 說明 |
 |---|---|---|
+| GET | `/api/health` | 回傳 `{ok: true}`，純存活檢查，不接資料庫；供外部排程（如 GitHub Actions）定時呼叫，避免免費方案閒置 sleep |
 | GET | `/api/config` | 回傳 `{cheeseUpcharge, pickupEstimateMinutes, storeOpen}`，`storeOpen` 讀自 `settings` 表（即時值） |
 | PATCH | `/api/config` 🔐users | `{storeOpen}`，切換是否開放顧客線上點餐，寫回 `settings` 表 |
 | GET | `/api/menu` | 回傳 `{items, categories}`，`items` 含 `soldOut` |
