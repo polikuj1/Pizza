@@ -1,14 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { api } from '../api';
-import { STATUS_LABELS, STATUS_COLORS, TABLES, itemsSummary, timeLabel } from '../composables/presentation';
-import type { Order } from '../types';
+import { handleLoadError } from '../composables/authGuard';
+import { TABLES } from '../composables/presentation';
+import { clearOrderItems } from '../store/checkedItems';
+import TableCard from '../components/TableCard.vue';
+import type { Order, TableCell } from '../types';
 
+const router = useRouter();
 const orders = ref<Order[]>([]);
 let timer: ReturnType<typeof setInterval> | undefined;
 
 async function load() {
-  orders.value = await api.getOrders('active');
+  try {
+    orders.value = await api.getOrders('active');
+  } catch (err) {
+    handleLoadError(err, router);
+  }
 }
 
 onMounted(async () => {
@@ -17,47 +26,60 @@ onMounted(async () => {
 });
 onUnmounted(() => clearInterval(timer));
 
-const tablesView = computed(() =>
-  TABLES.map((num) => {
-    const order = orders.value.find((o) => o.orderType === 'dinein' && o.table === num);
-    if (!order) return { num, occupied: false as const };
-    return { num, occupied: true as const, order, hasNext: order.status < 2 };
-  })
-);
+const tableMap = computed(() => {
+  const map: Record<number, TableCell> = {};
+  for (const num of TABLES) {
+    const tableOrders = orders.value.filter((o) => o.orderType === 'dinein' && o.table === num).sort((a, b) => a.id - b.id);
+    map[num] = tableOrders.length > 0 ? { num, occupied: true, orders: tableOrders } : { num, occupied: false };
+  }
+  return map;
+});
 
 async function advance(id: number) {
-  await api.advanceOrder(id);
-  await load();
+  try {
+    await api.advanceOrder(id);
+    await load();
+  } catch (err) {
+    handleLoadError(err, router);
+  }
 }
-async function clearTable(id: number) {
-  await api.clearOrder(id);
-  await load();
+async function clearTable(tableNum: number) {
+  try {
+    const cleared = await api.clearTable(tableNum);
+    cleared.forEach((o) => clearOrderItems(o.id));
+    await load();
+  } catch (err) {
+    handleLoadError(err, router);
+  }
 }
 </script>
 
 <template>
-  <main style="max-width:1000px;margin:0 auto;padding:26px 20px 60px;">
-    <div class="brand-text" style="font-size:22px;margin-bottom:4px;">桌況</div>
-    <div style="font-size:13px;color:rgba(26,26,29,.55);margin-bottom:22px;font-weight:700;">內用桌位即時狀態</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;">
-      <div v-for="t in tablesView" :key="t.num" :style="`border-radius:16px;padding:16px 18px;background:${t.occupied ? '#fff' : '#f2fbff'};border:2.5px solid #1a1a1a;`">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <span class="brand-text" style="font-size:20px;">{{ t.num }} 桌</span>
-          <span v-if="t.occupied" :style="`font-size:11px;font-weight:800;color:#1a1a1a;background:${STATUS_COLORS[t.order.status]};padding:4px 10px;border-radius:20px;border:2px solid #1a1a1a;`">{{ STATUS_LABELS[t.order.status] }}</span>
-        </div>
-        <template v-if="t.occupied">
-          <div style="font-size:12px;color:rgba(26,26,29,.7);line-height:1.6;margin-bottom:8px;">{{ itemsSummary(t.order) }}</div>
-          <div style="font-size:11px;color:rgba(26,26,29,.55);font-weight:700;margin-bottom:12px;">下單 {{ timeLabel(t.order.createdAt) }}・出餐 {{ t.order.servedAt ? timeLabel(t.order.servedAt) : '尚未出餐' }}</div>
-          <div style="font-weight:900;color:#e8384f;font-size:15px;margin-bottom:12px;">${{ t.order.total }}</div>
-          <div style="display:flex;gap:8px;">
-            <button v-if="t.hasNext" @click="advance(t.order.id)" style="flex:1;border:2px solid #1a1a1a;background:#ffdf3c;color:#1a1a1a;padding:9px 8px;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;">
-              推進至「{{ STATUS_LABELS[t.order.status + 1] }}」
-            </button>
-            <button @click="clearTable(t.order.id)" style="flex:1;border:2px solid #1a1a1a;background:#fff;color:#e8384f;padding:9px 8px;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;">結束用餐・清空</button>
+  <main class="mx-auto max-w-[1000px] px-5 pt-[26px] pb-[60px]">
+    <div class="brand-text mb-1 text-xl sm:text-[22px]">桌況</div>
+    <div class="mb-[22px] text-[13px] font-bold text-[rgba(26,26,29,.55)]">內用桌位即時狀態・依現場相對位置排列</div>
+
+    <div class="flex flex-col gap-8 lg:flex-row lg:items-start">
+      <section class="flex-1">
+        <div class="mb-3 text-xs font-extrabold text-[rgba(26,26,29,.5)]">前面</div>
+        <div class="grid grid-cols-2 gap-4">
+          <TableCard :cell="tableMap[1]" @advance="advance" @clear="clearTable" />
+          <TableCard :cell="tableMap[2]" @advance="advance" @clear="clearTable" />
+          <div class="col-span-2 flex h-16 items-center justify-center rounded-2xl border-2 border-dashed border-[rgba(26,26,29,.35)] bg-[rgba(26,26,29,.04)] text-xs font-bold text-[rgba(26,26,29,.45)]">
+            吧檯
           </div>
-        </template>
-        <div v-else style="text-align:center;color:rgba(26,26,29,.4);font-size:13px;font-weight:700;padding:30px 0;">空桌</div>
-      </div>
+        </div>
+      </section>
+
+      <section class="flex-1">
+        <div class="mb-3 text-xs font-extrabold text-[rgba(26,26,29,.5)]">後面</div>
+        <div class="grid grid-cols-2 gap-4">
+          <TableCard :cell="tableMap[3]" @advance="advance" @clear="clearTable" />
+          <TableCard :cell="tableMap[4]" @advance="advance" @clear="clearTable" />
+          <div></div>
+          <TableCard :cell="tableMap[5]" round @advance="advance" @clear="clearTable" />
+        </div>
+      </section>
     </div>
   </main>
 </template>

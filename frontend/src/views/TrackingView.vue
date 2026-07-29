@@ -28,37 +28,37 @@ const progressWidth = computed(() => `${((order.value?.status ?? 0) / 3) * 100}%
 </script>
 
 <template>
-  <main v-if="order" style="max-width:520px;margin:0 auto;padding:30px 20px 60px;">
-    <div style="text-align:center;margin-bottom:26px;">
-      <div style="font-size:13px;color:rgba(26,26,29,.55);font-weight:700;">訂單編號</div>
-      <div class="brand-text" style="font-size:30px;">#{{ order.id }}</div>
+  <main v-if="order" class="mx-auto max-w-[520px] px-5 pt-[30px] pb-[60px]">
+    <div class="mb-[26px] text-center">
+      <div class="text-[13px] font-bold text-[rgba(26,26,29,.55)]">訂單編號</div>
+      <div class="brand-text text-[30px]">#{{ order.id }}</div>
     </div>
 
-    <div style="display:flex;justify-content:space-between;position:relative;margin-bottom:34px;padding:0 6px;">
-      <div style="position:absolute;top:14px;left:24px;right:24px;height:3px;background:rgba(26,26,29,.15);z-index:0;"></div>
-      <div :style="`position:absolute;top:14px;left:24px;height:3px;background:#e8384f;z-index:1;width:${progressWidth};transition:width .3s;`"></div>
-      <div v-for="step in steps" :key="step.label" style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;">
-        <div :style="`width:28px;height:28px;border-radius:50%;background:${step.dotColor};border:2px solid #1a1a1a;color:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;`">{{ step.mark }}</div>
-        <span :style="`font-size:11px;font-weight:800;color:${step.labelColor};text-align:center;`">{{ step.label }}</span>
+    <div class="relative mb-[34px] flex justify-between px-1.5">
+      <div class="absolute top-3.5 right-6 left-6 z-0 h-[3px] bg-[rgba(26,26,29,.15)]"></div>
+      <div class="absolute top-3.5 left-6 z-10 h-[3px] bg-[#e8384f] transition-[width] duration-300" :style="{ width: progressWidth }"></div>
+      <div v-for="step in steps" :key="step.label" class="relative z-20 flex flex-1 flex-col items-center gap-2">
+        <div class="flex size-7 items-center justify-center rounded-full border-2 border-[#1a1a1a] text-[13px] font-black text-[#1a1a1a]" :style="{ background: step.dotColor }">{{ step.mark }}</div>
+        <span class="text-center text-[11px] font-extrabold" :style="{ color: step.labelColor }">{{ step.label }}</span>
       </div>
     </div>
 
-    <div style="background:#fff;border:2.5px solid #1a1a1a;border-radius:16px;padding:16px 18px;margin-bottom:16px;">
-      <div v-for="line in order.items" :key="line.id" style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;">
-        <span>{{ line.zh }} × {{ line.qty }}<span style="color:rgba(26,26,29,.5);">{{ line.tempSuffix }}{{ line.cheeseSuffix }}</span></span>
-        <span style="font-weight:800;">${{ line.lineTotal }}</span>
+    <div class="mb-4 rounded-2xl border-[2.5px] border-[#1a1a1a] bg-white p-4 sm:px-[18px]">
+      <div v-for="line in order.items" :key="line.id" class="flex justify-between py-1.5 text-[13px]">
+        <span>{{ line.zh }} × {{ line.qty }}<span class="text-[rgba(26,26,29,.5)]">{{ line.tempSuffix }}{{ line.cheeseSuffix }}</span></span>
+        <span class="font-extrabold">${{ line.lineTotal }}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:900;color:#e8384f;border-top:2px dashed rgba(26,26,29,.2);margin-top:8px;padding-top:10px;">
+      <div class="mt-2 flex justify-between border-t-2 border-dashed border-[rgba(26,26,29,.2)] pt-2.5 text-[15px] font-black text-[#e8384f]">
         <span>總計・{{ paymentLabel(order) }}</span><span>${{ order.total }}</span>
       </div>
     </div>
 
-    <div style="background:#4fb8e8;border:2.5px solid #1a1a1a;border-radius:16px;padding:14px 18px;font-size:13px;color:#1a1a1a;font-weight:700;line-height:1.7;margin-bottom:24px;">
+    <div class="mb-6 rounded-2xl border-[2.5px] border-[#1a1a1a] bg-[#4fb8e8] p-3.5 text-[13px] leading-relaxed font-bold text-[#1a1a1a] sm:px-[18px]">
       取餐人：{{ order.customerName }}（{{ order.customerPhone }}）<br />
       預估等候時間：約 {{ catalog.config?.pickupEstimateMinutes ?? 20 }} 分鐘<br />
       取餐地址：704臺南市北區南園街49巷51號
     </div>
 
-    <button @click="router.push('/')" style="width:100%;border:2.5px solid #1a1a1a;background:#fff;color:#1a1a1a;padding:13px;border-radius:14px;font-size:14px;font-weight:900;cursor:pointer;">返回菜單</button>
+    <button @click="router.push('/')" class="w-full cursor-pointer rounded-2xl border-[2.5px] border-[#1a1a1a] bg-white p-3.5 text-sm font-black text-[#1a1a1a]">返回菜單</button>
   </main>
 </template>

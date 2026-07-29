@@ -6,28 +6,33 @@ export const cartState = reactive({
   cartOpen: false,
 });
 
-export function addToCart(cart: Cart, id: string) {
-  const prev = cart[id] ?? { cheese: false, temp: 'ice' as const, qty: 0 };
-  cart[id] = { ...prev, qty: prev.qty + 1 };
+// hasTemp items get one cart entry per temp so 冰/熱 can be ordered in the same checkout independently
+export function cartKey(itemId: string, temp: 'ice' | 'hot' | null = null): string {
+  return temp ? `${itemId}:${temp}` : itemId;
 }
 
-export function adjustQty(cart: Cart, id: string, delta: number) {
-  const line = cart[id];
+export function addToCart(cart: Cart, itemId: string, temp: 'ice' | 'hot' | null = null) {
+  const key = cartKey(itemId, temp);
+  const prev = cart[key];
+  cart[key] = { itemId, cheese: prev?.cheese ?? false, temp: temp ?? 'ice', qty: (prev?.qty ?? 0) + 1 };
+}
+
+export function adjustQty(cart: Cart, key: string, delta: number) {
+  const line = cart[key];
   if (!line) return;
   const qty = line.qty + delta;
-  if (qty <= 0) delete cart[id];
-  else cart[id] = { ...line, qty };
+  if (qty <= 0) delete cart[key];
+  else cart[key] = { ...line, qty };
 }
 
-export function toggleCheese(cart: Cart, id: string) {
-  const line = cart[id];
-  if (line) cart[id] = { ...line, cheese: !line.cheese };
-  else cart[id] = { qty: 0, cheese: true, temp: 'ice' };
+export function removeFromCart(cart: Cart, key: string) {
+  delete cart[key];
 }
 
-export function setTemp(cart: Cart, id: string, temp: 'ice' | 'hot') {
-  const line = cart[id];
-  cart[id] = line ? { ...line, temp } : { qty: 0, cheese: false, temp };
+export function toggleCheese(cart: Cart, itemId: string) {
+  const line = cart[itemId];
+  if (line) cart[itemId] = { ...line, cheese: !line.cheese };
+  else cart[itemId] = { itemId, qty: 0, cheese: true, temp: 'ice' };
 }
 
 export function cartCount(cart: Cart): number {

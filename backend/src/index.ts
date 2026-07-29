@@ -3,15 +3,21 @@ import cors from 'cors';
 import 'dotenv/config';
 import { menuRouter } from './routes/menu';
 import { ordersRouter } from './routes/orders';
-import { config } from './config';
+import { authRouter } from './routes/auth';
+import { usersRouter } from './routes/users';
+import { statsRouter } from './routes/stats';
+import { configRouter } from './routes/config';
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
-app.get('/api/config', (_req, res) => res.json(config));
+app.use('/api/config', configRouter);
 app.use('/api/menu', menuRouter);
 app.use('/api/orders', ordersRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/stats', statsRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { catalog } from '../store/catalog';
-import { cartState, addToCart, adjustQty, toggleCheese, setTemp } from '../store/cart';
+import { cartState, cartKey, addToCart, adjustQty, toggleCheese } from '../store/cart';
 import { cheeseUpcharge } from '../composables/presentation';
 
 const menuCategory = ref('pizza');
@@ -11,19 +11,30 @@ const upcharge = computed(() => cheeseUpcharge());
 
 const menuDisplay = computed(() =>
   catalog.items
-    .filter((item) => item.category === menuCategory.value)
+    .filter((item) => item.category === menuCategory.value && item.enabled)
     .map((item) => {
+      if (item.hasTemp) {
+        return {
+          item,
+          qty: 0,
+          cheese: false,
+          showCheese: false,
+          iceQty: cartState.cart[cartKey(item.id, 'ice')]?.qty ?? 0,
+          hotQty: cartState.cart[cartKey(item.id, 'hot')]?.qty ?? 0,
+          displayPrice: item.price,
+        };
+      }
       const line = cartState.cart[item.id];
       const qty = line?.qty ?? 0;
       const cheese = line?.cheese ?? false;
-      const temp = line?.temp ?? 'ice';
       const showCheese = item.category === 'pizza';
       return {
         item,
         qty,
         cheese,
-        temp,
         showCheese,
+        iceQty: 0,
+        hotQty: 0,
         displayPrice: item.price + (cheese && showCheese ? upcharge.value : 0),
       };
     })
@@ -31,99 +42,113 @@ const menuDisplay = computed(() =>
 </script>
 
 <template>
-  <main style="max-width:720px;margin:0 auto;padding:0 0 60px;">
-    <div style="background:#4fb8e8;padding:10px 20px 30px;position:relative;overflow:hidden;">
-      <img src="/assets/wordmark-sunburst.png" style="width:100%;max-width:380px;display:block;margin:0 auto;" />
-      <div style="display:flex;justify-content:center;margin-top:-16px;position:relative;">
-        <img src="/assets/mascot-eating.png" style="width:150px;filter:drop-shadow(0 6px 0 rgba(26,26,26,.15));" />
+  <main class="mx-auto max-w-[720px] pb-[60px]">
+    <div class="relative overflow-hidden bg-[#4fb8e8] px-5 pt-2.5 pb-[30px]">
+      <img src="/assets/wordmark-sunburst.png" class="mx-auto block w-full max-w-[380px]" />
+      <div class="relative -mt-4 flex justify-center">
+        <img src="/assets/mascot-eating.png" class="w-[150px] drop-shadow-[0_6px_0_rgba(26,26,26,.15)]" />
       </div>
-      <div style="display:flex;justify-content:center;margin-top:6px;position:relative;">
+      <div class="relative mt-1.5 flex justify-center">
         <div
-          style="background:#fff;border:2.5px solid #1a1a1a;border-radius:10px;padding:6px 16px;transform:rotate(-2deg);font-family:'Archivo Black',sans-serif;font-size:12px;color:#e8384f;box-shadow:3px 3px 0 #1a1a1a;"
+          class="tab-font rotate-[-2deg] rounded-[10px] border-[2.5px] border-[#1a1a1a] bg-white px-4 py-1.5 text-xs text-[#e8384f] shadow-[3px_3px_0_#1a1a1a]"
         >
           Better Pizza, Better Life.
         </div>
       </div>
-      <div style="text-align:center;margin-top:14px;font-size:12px;color:#1a1a1a;font-weight:700;">
+      <div class="mt-3.5 text-center text-xs font-bold text-[#1a1a1a]">
         704臺南市北區南園街49巷51號・週二〜週日 12:00–20:00・週一公休
       </div>
     </div>
-    <div style="padding:20px 20px 0;">
-      <div style="position:relative;border-radius:16px;border:3px solid #1a1a1a;overflow:hidden;height:180px;">
-        <img src="/assets/hero-pizza.png" style="width:100%;height:100%;object-fit:cover;" />
+    <div class="px-5 pt-5">
+      <div class="relative h-[180px] overflow-hidden rounded-2xl border-[3px] border-[#1a1a1a] sm:h-[240px]">
+        <img src="/assets/hero-pizza.png" class="size-full object-cover" />
       </div>
     </div>
 
-    <div v-if="storeClosed" style="margin:16px 20px 0;background:#e8384f;color:#fff;padding:12px 16px;border-radius:10px;border:2.5px solid #1a1a1a;font-size:14px;font-weight:800;text-align:center;">
+    <div v-if="storeClosed" class="mx-5 mt-4 rounded-[10px] border-[2.5px] border-[#1a1a1a] bg-[#e8384f] p-3 text-center text-sm font-extrabold text-white">
       本日公休，暫停線上點餐
     </div>
 
-    <div style="padding:22px 20px 6px;">
-      <div style="display:flex;gap:8px;">
+    <div class="px-5 pt-[22px] pb-1.5">
+      <div class="flex flex-wrap gap-2">
         <button
           v-for="cat in catalog.categories"
           :key="cat.id"
           @click="menuCategory = cat.id"
-          :style="`border:2.5px solid #1a1a1a;background:${menuCategory === cat.id ? '#ffdf3c' : '#fff'};color:#1a1a1a;padding:9px 18px;border-radius:12px;font-family:'Archivo Black',sans-serif;font-size:13px;cursor:pointer;`"
+          :class="menuCategory === cat.id ? 'bg-[#ffdf3c]' : 'bg-white'"
+          class="tab-font cursor-pointer rounded-xl border-[2.5px] border-[#1a1a1a] px-[18px] py-2.5 text-[13px] text-[#1a1a1a]"
         >
           {{ cat.label }}
         </button>
       </div>
-      <p style="font-size:12px;color:rgba(26,26,29,.55);margin:14px 0 0;line-height:1.6;">
+      <p class="mt-3.5 text-xs leading-relaxed text-[rgba(26,26,29,.55)]">
         餅皮採用高含水老麵長時間低溫發酵，富含氣體，高溫窯烤後外緣呈現微氣泡、口感輕盈。
       </p>
     </div>
 
-    <div style="display:flex;flex-direction:column;gap:14px;padding:10px 20px 0;">
-      <div v-for="row in menuDisplay" :key="row.item.id" style="background:#fff;border:2.5px solid #1a1a1a;border-radius:16px;padding:16px 18px;">
-        <div style="display:flex;justify-content:space-between;gap:12px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
-              <span style="font-size:17px;font-weight:900;color:#1a1a1a;">{{ row.item.zh }}</span>
-              <span style="font-size:11px;color:rgba(26,26,29,.5);">{{ row.item.en }}</span>
+    <div class="flex flex-col gap-3.5 px-5 pt-2.5">
+      <div v-for="row in menuDisplay" :key="row.item.id" class="rounded-2xl border-[2.5px] border-[#1a1a1a] bg-white p-4 sm:px-[18px]">
+        <div class="flex flex-col justify-between gap-3 sm:flex-row">
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-baseline gap-2">
+              <span class="text-[17px] font-black text-[#1a1a1a]">{{ row.item.zh }}</span>
+              <span class="text-[11px] text-[rgba(26,26,29,.5)]">{{ row.item.en }}</span>
+              <span v-if="row.item.soldOut" class="rounded-full bg-[rgba(26,26,29,.5)] px-2 py-0.5 text-[11px] font-extrabold text-white">已完售</span>
             </div>
-            <div style="font-size:13px;color:rgba(26,26,29,.65);margin-top:4px;">{{ row.item.description }}</div>
-            <label v-if="row.showCheese" style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:12px;color:rgba(26,26,29,.7);cursor:pointer;width:fit-content;font-weight:700;">
+            <div class="mt-1 text-[13px] text-[rgba(26,26,29,.65)]">{{ row.item.description }}</div>
+            <label v-if="row.showCheese" class="mt-2.5 flex w-fit cursor-pointer items-center gap-1.5 text-xs font-bold text-[rgba(26,26,29,.7)]">
               <input
                 type="checkbox"
                 :checked="row.cheese"
                 @change="toggleCheese(cartState.cart, row.item.id)"
-                style="accent-color:#e8384f;width:15px;height:15px;"
+                class="size-[15px] accent-[#e8384f]"
               />
               起司多一點 +{{ upcharge }}元
             </label>
-            <div v-if="row.item.hasTemp" style="display:flex;gap:6px;margin-top:10px;">
-              <button
-                @click="setTemp(cartState.cart, row.item.id, 'ice')"
-                :style="`border:2px solid #1a1a1a;background:${row.temp === 'ice' ? '#ffdf3c' : '#fff'};color:#1a1a1a;padding:5px 12px;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;`"
-              >
-                冰
-              </button>
-              <button
-                @click="setTemp(cartState.cart, row.item.id, 'hot')"
-                :style="`border:2px solid #1a1a1a;background:${row.temp === 'hot' ? '#ffdf3c' : '#fff'};color:#1a1a1a;padding:5px 12px;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;`"
-              >
-                熱
-              </button>
-            </div>
           </div>
-          <div style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
-            <span style="background:#e8384f;color:#fff;border:2px solid #1a1a1a;border-radius:20px;padding:5px 12px;font-size:15px;font-weight:900;white-space:nowrap;">
+          <div v-if="!row.item.hasTemp" class="flex flex-none flex-row items-center justify-between gap-2.5 sm:flex-col sm:items-end">
+            <span class="rounded-full border-2 border-[#1a1a1a] bg-[#e8384f] px-3 py-1.5 text-[15px] font-black whitespace-nowrap text-white">
               ${{ row.displayPrice }}
             </span>
-            <div v-if="row.qty > 0" style="display:flex;align-items:center;gap:8px;background:#f2fbff;border:2px solid #1a1a1a;border-radius:10px;padding:4px 6px;">
-              <button @click="adjustQty(cartState.cart, row.item.id, -1)" style="width:26px;height:26px;border:none;border-radius:6px;background:#fff;color:#1a1a1a;font-size:16px;font-weight:900;cursor:pointer;">−</button>
-              <span style="min-width:16px;text-align:center;font-weight:900;font-size:14px;">{{ row.qty }}</span>
-              <button @click="adjustQty(cartState.cart, row.item.id, 1)" style="width:26px;height:26px;border:none;border-radius:6px;background:#fff;color:#1a1a1a;font-size:16px;font-weight:900;cursor:pointer;">+</button>
-            </div>
-            <button
-              v-else
-              @click="addToCart(cartState.cart, row.item.id)"
-              :disabled="storeClosed"
-              style="border:2.5px solid #1a1a1a;background:#ffdf3c;color:#1a1a1a;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;box-shadow:2.5px 2.5px 0 #1a1a1a;"
+            <template v-if="!storeClosed">
+              <div v-if="row.qty > 0" class="flex items-center gap-2 rounded-[10px] border-2 border-[#1a1a1a] bg-[#f2fbff] px-1.5 py-1">
+                <button @click="adjustQty(cartState.cart, row.item.id, -1)" class="size-[26px] cursor-pointer rounded-md border-none bg-white text-base font-black text-[#1a1a1a]">−</button>
+                <span class="min-w-4 text-center text-sm font-black">{{ row.qty }}</span>
+                <button @click="adjustQty(cartState.cart, row.item.id, 1)" :disabled="row.item.soldOut" class="size-[26px] cursor-pointer rounded-md border-none bg-white text-base font-black text-[#1a1a1a] disabled:cursor-not-allowed disabled:opacity-50">+</button>
+              </div>
+              <button
+                v-else
+                @click="addToCart(cartState.cart, row.item.id)"
+                :disabled="row.item.soldOut"
+                class="cursor-pointer rounded-[10px] border-[2.5px] border-[#1a1a1a] bg-[#ffdf3c] px-4 py-2 text-[13px] font-extrabold whitespace-nowrap text-[#1a1a1a] shadow-[2.5px_2.5px_0_#1a1a1a] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {{ row.item.soldOut ? '已完售' : '加入購物車' }}
+              </button>
+            </template>
+          </div>
+          <div v-else class="flex flex-none flex-col gap-2">
+            <div
+              v-for="temp in (['ice', 'hot'] as const)"
+              :key="temp"
+              class="flex items-center justify-between gap-3 rounded-[10px] border-2 border-[#1a1a1a] bg-[#f2fbff] px-2.5 py-1.5"
             >
-              加入購物車
-            </button>
+              <span class="text-[13px] font-extrabold whitespace-nowrap">{{ temp === 'ice' ? '冰' : '熱' }} ${{ row.displayPrice }}</span>
+              <template v-if="!storeClosed">
+                <div v-if="(temp === 'ice' ? row.iceQty : row.hotQty) > 0" class="flex items-center gap-2 rounded-md border-2 border-[#1a1a1a] bg-white px-1.5 py-1">
+                  <button @click="adjustQty(cartState.cart, cartKey(row.item.id, temp), -1)" class="size-[26px] cursor-pointer rounded-md border-none bg-white text-base font-black text-[#1a1a1a]">−</button>
+                  <span class="min-w-4 text-center text-sm font-black">{{ temp === 'ice' ? row.iceQty : row.hotQty }}</span>
+                  <button @click="adjustQty(cartState.cart, cartKey(row.item.id, temp), 1)" :disabled="row.item.soldOut" class="size-[26px] cursor-pointer rounded-md border-none bg-white text-base font-black text-[#1a1a1a] disabled:cursor-not-allowed disabled:opacity-50">+</button>
+                </div>
+                <button
+                  v-else
+                  @click="addToCart(cartState.cart, row.item.id, temp)"
+                  :disabled="row.item.soldOut"
+                  class="cursor-pointer rounded-lg border-2 border-[#1a1a1a] bg-[#ffdf3c] px-3 py-1.5 text-[11px] font-extrabold whitespace-nowrap text-[#1a1a1a] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {{ row.item.soldOut ? '已完售' : '加入購物車' }}
+                </button>
+              </template>
+            </div>
           </div>
         </div>
       </div>

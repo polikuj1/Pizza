@@ -3,7 +3,6 @@ import 'dotenv/config';
 export const config = {
   cheeseUpcharge: Number(process.env.CHEESE_UPCHARGE ?? 50),
   pickupEstimateMinutes: Number(process.env.PICKUP_ESTIMATE_MINUTES ?? 20),
-  storeOpen: process.env.STORE_OPEN !== 'false',
 };
 
 export const CATEGORIES = [
@@ -12,4 +11,7 @@ export const CATEGORIES = [
   { id: 'snacks', label: 'Snacks' },
 ];
 
-export const TABLES = [1, 2, 3, 4, 5, 6, 7, 8];
+export const TABLES = [1, 2, 3, 4, 5];
+
+export const PERMISSIONS = ['admin', 'pos', 'tables', 'history', 'users', 'menu', 'stats'] as const;
+export type Permission = (typeof PERMISSIONS)[number];

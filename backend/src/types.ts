@@ -6,6 +6,8 @@ export interface MenuItem {
   price: number;
   category: string;
   hasTemp: boolean;
+  soldOut: boolean;
+  enabled: boolean;
 }
 
 export interface OrderLine {
@@ -20,6 +22,8 @@ export interface OrderLine {
   tempSuffix: string;
 }
 
+export type OrderChannel = 'walkin' | 'ig';
+
 export interface Order {
   id: number;
   items: OrderLine[];
@@ -31,6 +35,9 @@ export interface Order {
   status: number;
   orderType: 'online' | 'dinein' | 'takeout';
   table: number | null;
+  channel: OrderChannel | null;
+  pickupDate: string | null;
+  pickupTime: string | null;
   createdAt: string;
   servedAt: string | null;
   completedAt: string | null;
