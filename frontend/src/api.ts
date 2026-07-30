@@ -1,4 +1,4 @@
-import type { AppConfig, Cart, Category, MenuItem, Order, OrderChannel, OrderHistoryPage, Permission, StaffUser, StatsRange, StatsSummary } from './types';
+import type { AppConfig, Cart, CartItemInput, Category, MenuItem, Order, OrderChannel, OrderHistoryPage, Permission, StaffUser, StatsRange, StatsSummary } from './types';
 
 export class ApiError extends Error {
   constructor(message: string, public status: number) {
@@ -19,7 +19,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return body as T;
 }
 
-function cartToItems(cart: Cart) {
+function cartToItems(cart: Cart): CartItemInput[] {
   return Object.values(cart)
     .filter((line) => line.qty > 0)
     .map((line) => ({ id: line.itemId, qty: line.qty, cheese: line.cheese, temp: line.temp }));

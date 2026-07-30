@@ -1,51 +1,10 @@
-export interface MenuItem {
-  id: string;
-  zh: string;
-  en: string;
-  description: string;
-  price: number;
-  category: string;
-  hasTemp: boolean;
-  soldOut: boolean;
-  enabled: boolean;
-}
+// 跟後端共用的型別直接從 backend/src/shared/types.ts 引用（見該檔案開頭的說明），避免兩邊各自手刻同一組型別、改了忘記同步
+import type { MenuItem, OrderLine, OrderChannel, Order, Permission, CartItemInput } from '../../backend/src/shared/types';
+export type { MenuItem, OrderLine, OrderChannel, Order, Permission, CartItemInput };
 
 export interface Category {
   id: string;
   label: string;
-}
-
-export interface OrderLine {
-  id: string;
-  zh: string;
-  qty: number;
-  cheese: boolean;
-  temp: 'ice' | 'hot';
-  unitPrice: number;
-  lineTotal: number;
-  cheeseSuffix: string;
-  tempSuffix: string;
-}
-
-export type OrderChannel = 'walkin' | 'ig';
-
-export interface Order {
-  id: number;
-  items: OrderLine[];
-  total: number;
-  customerName: string;
-  customerPhone: string;
-  note: string;
-  payment: 'store' | 'online';
-  status: number;
-  orderType: 'online' | 'dinein' | 'takeout';
-  table: number | null;
-  channel: OrderChannel | null;
-  pickupDate: string | null;
-  pickupTime: string | null;
-  createdAt: string;
-  servedAt: string | null;
-  completedAt: string | null;
 }
 
 export interface AppConfig {
@@ -62,8 +21,6 @@ export interface CartLineState {
 }
 
 export type Cart = Record<string, CartLineState>;
-
-export type Permission = 'admin' | 'pos' | 'tables' | 'history' | 'users' | 'menu' | 'stats';
 
 export type StatsRange = 'day' | 'week' | 'month' | 'custom';
 

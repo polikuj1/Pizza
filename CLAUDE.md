@@ -7,6 +7,7 @@ Vue 3 + TypeScript 前端、Node.js (Express) + TypeScript 後端、PostgreSQL �
 
 Vite + Vue 3 + TypeScript，vue-router 分頁，無 Pinia（購物車/菜單用 `reactive()` singleton store 即可）。
 
+- `src/types.ts` — `MenuItem`/`OrderLine`/`OrderChannel`/`Order`/`Permission`/`CartItemInput` 是 `import type ... from '../../backend/src/shared/types'` 引用後端的共用型別（不是重複手刻），其餘（`Cart`、`AppConfig`、`StatsSummary` 等前端專用型別）留在這個檔案
 - `src/router.ts` — 路由定義；`beforeEach` 除了員工權限守衛，也會在進入 `/checkout` 前確保 catalog 已載入，公休/暫停點餐（`catalog.config.storeOpen === false`）時導回 `/`
 - `src/store/cart.ts` — 購物車狀態（`cartState.cart`, `cartState.cartOpen`）與加減/加起司/冰熱操作。`Cart` 用 `cartKey(itemId, temp)` 當 key（`CartLineState` 存 `itemId`），有 `hasTemp` 的品項冰/熱各自是獨立一行，同一品項可以同時加冰的跟熱的、數量各自累加；`addToCart(cart, itemId, temp?)` 依 `temp` 決定寫入哪個 key
 - `src/store/catalog.ts` — 菜單與設定（`/api/menu`, `/api/config`）的載入與快取，`loadCatalog()` 是 cache 過的 promise，整個分頁只會真正打一次（`AdminView` 例外，見下方）
@@ -42,8 +43,10 @@ Vite + Vue 3 + TypeScript，vue-router 分頁，無 Pinia（購物車/菜單用 
 
 Express + TypeScript，直接用 `pg` 下 SQL（無 ORM）。
 
+- `src/shared/types.ts` — **前後端共用型別**（`MenuItem`、`OrderLine`、`OrderChannel`、`Order`、`CartItemInput`、`Permission`/`PERMISSIONS`）。物理上放在 `backend/src/` 底下是刻意的：後端用 `tsc` 真的把檔案編譯進 `dist/`，`rootDir: "src"` 要求所有原始檔在 `src/` 之下；前端是 `noEmit`（Vite 負責打包，不受 rootDir 限制），可以自由用相對路徑跨資料夾 import——`frontend/src/types.ts` 直接 `import type ... from '../../backend/src/shared/types'` 引用同一份定義，不再各自手刻一份。前後端分別部署在 Cloudflare／Render 不影響這個做法：兩邊建置時都是先 clone 整個 git repo，再各自進到 `frontend`/`backend` 跑指令，`shared/` 檔案本來就在 repo 裡，不需要额外的 npm workspace 或發布套件
+- `src/types.ts` — barrel，`export type {...} from './shared/types'`，backend 內部沿用 `from '../types'` 的既有 import 路徑不用全部改
 - `src/db.ts` — PostgreSQL connection pool
-- `src/config.ts` — 靜態營運設定常數（`cheeseUpcharge`、`pickupEstimateMinutes`）、`CATEGORIES`、`TABLES`。`storeOpen` 不在這裡，見 `src/settings.ts`
+- `src/config.ts` — 靜態營運設定常數（`cheeseUpcharge`、`pickupEstimateMinutes`）、`CATEGORIES`、`TABLES`；`PERMISSIONS`/`Permission` re-export 自 `shared/types.ts`。`storeOpen` 不在這裡，見 `src/settings.ts`
 - `src/settings.ts` — `getStoreOpen()` / `setStoreOpen(open)`，讀寫 `settings` 資料表（單一列，是否開放顧客線上點餐），可在後台即時切換、不用重啟服務
 - `src/auth.ts` — 登入 session 簽發/驗證（Node `crypto` HMAC 簽名 cookie，無 JWT 套件）、密碼雜湊（`crypto.scrypt`，無 bcrypt 套件）、`requireStaffAuth`（任何已登入員工）、`requirePermission(key)`（需具備特定權限，查 DB）middleware
 - `src/routes/config.ts`、`src/routes/menu.ts`、`src/routes/orders.ts`、`src/routes/auth.ts`、`src/routes/users.ts`、`src/routes/stats.ts` — API 路由
