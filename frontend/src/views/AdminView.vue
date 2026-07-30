@@ -60,6 +60,10 @@
     },
   ]);
 
+  const orderProcessingCount = computed(() => {
+    return (orders.value || []).filter((el) => el.status < 2)?.length;
+  });
+
   async function advance(id: number) {
     try {
       const order = await api.advanceOrder(id);
@@ -91,7 +95,7 @@
   <main class="mx-auto max-w-[1100px] px-5 pt-[26px] pb-[60px]">
     <div class="brand-text mb-1 text-xl sm:text-[22px]">當日訂單佇列</div>
     <div class="mb-[22px] text-[13px] font-bold text-[rgba(26,26,29,.55)]">
-      共 {{ orders.length }} 筆進行中訂單
+      共 {{ orderProcessingCount }} 筆進行中訂單
     </div>
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
