@@ -6,11 +6,16 @@
   import { TABLES } from "../composables/presentation";
   import { clearOrderItems } from "../store/checkedItems";
   import TableCard from "../components/TableCard.vue";
-  import type { Order, TableCell } from "../types";
+  import TableOrderDrawer from "../components/TableOrderDrawer.vue";
+  import type { Order, TableCell, Cart } from "../types";
 
   const router = useRouter();
   const orders = ref<Order[]>([]);
   let timer: ReturnType<typeof setInterval> | undefined;
+
+  const drawerOpen = ref(false);
+  const drawerTableNum = ref<number | null>(null);
+  const drawerHasOrders = ref(false);
 
   async function load() {
     try {
@@ -40,6 +45,39 @@
     return map;
   });
 
+  function openDrawer(tableNum: number) {
+    drawerTableNum.value = tableNum;
+    drawerHasOrders.value = tableMap.value[tableNum].occupied;
+    drawerOpen.value = true;
+  }
+
+  function closeDrawer() {
+    drawerOpen.value = false;
+  }
+
+  async function submitTableOrder(cart: Cart, note: string, paid: boolean) {
+    if (!drawerTableNum.value) return;
+    try {
+      const order = await api.createPosOrder({
+        cart,
+        orderType: 'dinein',
+        table: drawerTableNum.value,
+        channel: null,
+        pickupDate: null,
+        pickupTime: null,
+        note,
+      });
+      // 訂單建立後，更新付款狀態
+      if (paid) {
+        await api.updateOrderPaid(order.id, true);
+      }
+      closeDrawer();
+      await load();
+    } catch (err) {
+      handleLoadError(err, router);
+    }
+  }
+
   async function advance(id: number) {
     try {
       await api.advanceOrder(id);
@@ -52,6 +90,14 @@
     try {
       const cleared = await api.clearTable(tableNum);
       cleared.forEach((o) => clearOrderItems(o.id));
+      await load();
+    } catch (err) {
+      handleLoadError(err, router);
+    }
+  }
+  async function updatePaid(id: number, paid: boolean) {
+    try {
+      await api.updateOrderPaid(id, paid);
       await load();
     } catch (err) {
       handleLoadError(err, router);
@@ -76,11 +122,15 @@
             :cell="tableMap[1]"
             @advance="advance"
             @clear="clearTable"
+            @click-table="openDrawer"
+            @update-paid="updatePaid"
           />
           <TableCard
             :cell="tableMap[2]"
             @advance="advance"
             @clear="clearTable"
+            @click-table="openDrawer"
+            @update-paid="updatePaid"
           />
           <div
             class="col-span-2 flex h-16 items-center justify-center rounded-2xl border-2 border-dashed border-[rgba(26,26,29,.35)] bg-[rgba(26,26,29,.04)] text-xs font-bold text-[rgba(26,26,29,.45)]"
@@ -99,11 +149,15 @@
             :cell="tableMap[3]"
             @advance="advance"
             @clear="clearTable"
+            @click-table="openDrawer"
+            @update-paid="updatePaid"
           />
           <TableCard
             :cell="tableMap[4]"
             @advance="advance"
             @clear="clearTable"
+            @click-table="openDrawer"
+            @update-paid="updatePaid"
           />
           <div></div>
           <TableCard
@@ -111,9 +165,20 @@
             round
             @advance="advance"
             @clear="clearTable"
+            @click-table="openDrawer"
+            @update-paid="updatePaid"
           />
         </div>
       </section>
     </div>
+
+    <!-- 加點抽屜 -->
+    <TableOrderDrawer
+      :table-num="drawerTableNum"
+      :has-orders="drawerHasOrders"
+      :open="drawerOpen"
+      @close="closeDrawer"
+      @submit="submitTableOrder"
+    />
   </main>
 </template>

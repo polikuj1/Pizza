@@ -41,6 +41,7 @@ export interface Order {
   channel: OrderChannel | null;
   pickupDate: string | null;
   pickupTime: string | null;
+  paid: boolean;
   createdAt: string;
   servedAt: string | null;
   completedAt: string | null;

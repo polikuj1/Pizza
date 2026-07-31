@@ -82,6 +82,7 @@ export const api = {
   advanceOrder: (id: number) => request<Order>(`/orders/${id}/advance`, { method: 'PATCH' }),
   clearOrder: (id: number) => request<Order>(`/orders/${id}/clear`, { method: 'PATCH' }),
   clearTable: (tableNum: number) => request<Order[]>(`/orders/table/${tableNum}/clear`, { method: 'PATCH' }),
+  updateOrderPaid: (id: number, paid: boolean) => request<Order>(`/orders/${id}/paid`, { method: 'PATCH', body: JSON.stringify({ paid }) }),
   deleteOrder: (id: number) => request<{ ok: true }>(`/orders/${id}`, { method: 'DELETE' }),
 
   getMe: () => request<{ authenticated: boolean; permissions: Permission[] }>('/auth/me'),

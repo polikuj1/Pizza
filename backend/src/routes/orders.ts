@@ -25,6 +25,7 @@ function rowToOrder(row: any): Order {
     channel: row.channel,
     pickupDate: row.pickup_date,
     pickupTime: row.pickup_time,
+    paid: row.paid ?? false,
     createdAt: row.created_at,
     servedAt: row.served_at,
     completedAt: row.completed_at,
@@ -229,6 +230,21 @@ ordersRouter.patch(
          completed_at = COALESCE(completed_at, now())
        WHERE id = $1 RETURNING *`,
       [req.params.id, MAX_STATUS]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: '訂單不存在' });
+    res.json(rowToOrder(result.rows[0]));
+  })
+);
+
+ordersRouter.patch(
+  '/:id/paid',
+  requireStaffAuth,
+  ah(async (req, res) => {
+    const { paid } = req.body;
+    if (typeof paid !== 'boolean') return res.status(400).json({ error: '付款狀態必須是布林值' });
+    const result = await pool.query(
+      'UPDATE orders SET paid = $2 WHERE id = $1 RETURNING *',
+      [req.params.id, paid]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: '訂單不存在' });
     res.json(rowToOrder(result.rows[0]));

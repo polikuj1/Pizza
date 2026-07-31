@@ -131,6 +131,10 @@ async function submitPosOrder() {
 function newOrder() {
   posConfirmedId.value = null;
 }
+
+function removePosCartItem(lineId: string) {
+  delete posCart[lineId];
+}
 </script>
 
 <template>
@@ -282,9 +286,12 @@ function newOrder() {
         <div class="rounded-2xl border-[2.5px] border-[#1a1a1a] bg-white p-[18px] lg:sticky lg:top-[84px]">
           <div class="mb-3 text-[15px] font-black">目前訂單</div>
           <div v-if="lines.length === 0" class="py-[30px] text-center text-[13px] text-[rgba(26,26,29,.5)]">尚未加入品項</div>
-          <div v-for="line in lines" :key="line.id" class="flex justify-between border-b border-dashed border-[rgba(26,26,29,.15)] py-[7px] text-[13px]">
+          <div v-for="line in lines" :key="line.id" class="flex items-center justify-between border-b border-dashed border-[rgba(26,26,29,.15)] py-[17px] text-lg">
             <span>{{ line.zh }} × {{ line.qty }}<span class="text-[rgba(26,26,29,.5)]">{{ line.tempSuffix }}{{ line.cheeseSuffix }}</span></span>
-            <span class="font-extrabold">${{ line.lineTotal }}</span>
+            <div class="flex items-center gap-2.5">
+              <span class="font-extrabold">${{ line.lineTotal }}</span>
+              <button @click="removePosCartItem(line.id)" class="size-7 flex items-center justify-center rounded-md bg-[rgba(26,26,29,.1)] hover:bg-[rgba(26,26,29,.2)] text-[#1a1a1a] font-bold text-lg cursor-pointer">×</button>
+            </div>
           </div>
           <div class="mt-3 flex justify-between border-t-2 border-dashed border-[rgba(26,26,29,.2)] pt-2.5 text-base font-black text-[#e8384f]">
             <span>總計</span><span>${{ total }}</span>
