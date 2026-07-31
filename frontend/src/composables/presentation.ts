@@ -35,7 +35,7 @@ export function paymentLabel(o: Order): string {
   return o.payment === 'online' ? '線上付款' : '到店付款';
 }
 
-export const CHANNEL_LABELS: Record<string, string> = { walkin: '現場', ig: 'IG' };
+export const CHANNEL_LABELS: Record<string, string> = { walkin: '現場', ig: 'IG', phone: '電話' };
 
 export function channelLabel(o: Order): string {
   return o.channel ? (CHANNEL_LABELS[o.channel] ?? o.channel) : '';

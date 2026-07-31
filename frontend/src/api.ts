@@ -74,6 +74,7 @@ export const api = {
     pickupDate: string | null;
     pickupTime: string | null;
     note: string;
+    paid: boolean;
   }) =>
     request<Order>('/orders/pos', {
       method: 'POST',

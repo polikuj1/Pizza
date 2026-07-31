@@ -25,7 +25,7 @@ export interface OrderLine {
   tempSuffix: string;
 }
 
-export type OrderChannel = 'walkin' | 'ig';
+export type OrderChannel = 'walkin' | 'ig' | 'phone';
 
 export interface Order {
   id: number;

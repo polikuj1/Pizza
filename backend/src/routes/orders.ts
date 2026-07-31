@@ -6,7 +6,7 @@ import { requirePermission, requireStaffAuth } from '../auth';
 import { getStoreOpen } from '../settings';
 import type { CartItemInput, MenuItem, Order, OrderChannel, OrderLine } from '../types';
 
-const ORDER_CHANNELS: OrderChannel[] = ['walkin', 'ig'];
+const ORDER_CHANNELS: OrderChannel[] = ['walkin', 'ig', 'phone'];
 
 export const ordersRouter = Router();
 
@@ -171,7 +171,7 @@ ordersRouter.post(
   '/pos',
   requireStaffAuth,
   ah(async (req, res) => {
-    const { items, orderType, table, note, channel, pickupDate, pickupTime } = req.body;
+    const { items, orderType, table, note, channel, pickupDate, pickupTime, paid } = req.body;
     const lines = await buildLines(items ?? []);
     if (lines.length === 0) return res.status(400).json({ error: '尚未加入品項' });
 
@@ -183,9 +183,10 @@ ordersRouter.post(
     // POS 允許同桌加點：不檢查該桌是否已有進行中訂單（顧客自行下單那邊仍然檢查，見上面 POST /）
     const total = lines.reduce((n, l) => n + l.lineTotal, 0);
     const customerName = isDinein ? `內用 ${tableNum} 桌` : '現場外帶客人';
+    const paidStatus = typeof paid === 'boolean' ? paid : false;
     const result = await pool.query(
-      `INSERT INTO orders (items, total, customer_name, customer_phone, note, payment, status, order_type, table_num, channel, pickup_date, pickup_time)
-       VALUES ($1, $2, $3, '—', $4, 'store', 0, $5, $6, $7, $8, $9) RETURNING *`,
+      `INSERT INTO orders (items, total, customer_name, customer_phone, note, payment, status, order_type, table_num, channel, pickup_date, pickup_time, paid)
+       VALUES ($1, $2, $3, '—', $4, 'store', 0, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [
         JSON.stringify(lines),
         total,
@@ -194,8 +195,9 @@ ordersRouter.post(
         isDinein ? 'dinein' : 'takeout',
         tableNum,
         isDinein ? null : channel,
-        channel === 'ig' && pickupDate ? String(pickupDate) : null,
-        channel === 'ig' && pickupTime ? String(pickupTime) : null,
+        (channel === 'ig' || channel === 'phone') && pickupDate ? String(pickupDate) : null,
+        (channel === 'ig' || channel === 'phone') && pickupTime ? String(pickupTime) : null,
+        paidStatus,
       ]
     );
     res.status(201).json(rowToOrder(result.rows[0]));
