@@ -192,6 +192,7 @@
                 >${{ order.total }}</span
               >
               <button
+                v-debounce
                 @click="advance(order.id)"
                 class="cursor-pointer rounded-[10px] border-2 border-[#1a1a1a] bg-[#ffdf3c] px-4 py-2 text-xs font-extrabold text-[#1a1a1a]"
               >

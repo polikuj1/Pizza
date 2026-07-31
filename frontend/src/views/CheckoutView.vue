@@ -19,6 +19,8 @@ const pickupHour = ref('');
 const pickupMinute = ref('');
 const pickupTime = computed(() => (pickupHour.value && pickupMinute.value ? `${pickupHour.value}:${pickupMinute.value}` : ''));
 
+const submitting = ref(false);
+
 const form = reactive({
   customerName: '',
   customerPhone: '',
@@ -41,6 +43,7 @@ function selectTable(num: number) {
 }
 
 async function submitOrder() {
+  if (submitting.value) return;
   if (lines.value.length === 0) {
     form.error = '購物車是空的';
     return;
@@ -53,6 +56,7 @@ async function submitOrder() {
     form.error = '請填寫聯絡電話';
     return;
   }
+  submitting.value = true;
   try {
     const order = await api.createOrder({
       cart: cartState.cart,
@@ -72,6 +76,8 @@ async function submitOrder() {
     router.push(`/order/${order.id}`);
   } catch (err) {
     form.error = err instanceof Error ? err.message : '發生錯誤';
+  } finally {
+    submitting.value = false;
   }
 }
 </script>
@@ -164,8 +170,13 @@ async function submitOrder() {
 
     <div v-if="form.error" class="mb-3 text-[13px] font-extrabold text-[#e8384f]">{{ form.error }}</div>
 
-    <button @click="submitOrder" class="w-full cursor-pointer rounded-2xl border-[2.5px] border-[#1a1a1a] bg-[#ffdf3c] p-[15px] text-base font-black text-[#1a1a1a] shadow-[3px_3px_0_#1a1a1a]">
-      送出訂單
+    <button
+      v-debounce
+      @click="submitOrder"
+      :disabled="submitting"
+      class="w-full cursor-pointer rounded-2xl border-[2.5px] border-[#1a1a1a] bg-[#ffdf3c] p-[15px] text-base font-black text-[#1a1a1a] shadow-[3px_3px_0_#1a1a1a] disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {{ submitting ? '處理中…' : '送出訂單' }}
     </button>
   </main>
 </template>

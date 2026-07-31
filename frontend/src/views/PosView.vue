@@ -24,6 +24,7 @@ const posPickupMinute = ref('');
 const posPickupTime = computed(() => (posPickupHour.value && posPickupMinute.value ? `${posPickupHour.value}:${posPickupMinute.value}` : ''));
 const posNote = ref('');
 const posFormError = ref('');
+const posSubmitting = ref(false);
 const posConfirmedId = ref<number | null>(null);
 const activeOrders = ref<Order[]>([]);
 
@@ -89,6 +90,7 @@ function selectChannel(channel: OrderChannel) {
 }
 
 async function submitPosOrder() {
+  if (posSubmitting.value) return;
   if (lines.value.length === 0) return;
   if (posOrderType.value === 'dinein' && !posTable.value) {
     posFormError.value = '請選擇桌號';
@@ -98,6 +100,7 @@ async function submitPosOrder() {
     posFormError.value = '請選擇外帶通路';
     return;
   }
+  posSubmitting.value = true;
   try {
     const order = await api.createPosOrder({
       cart: posCart,
@@ -120,6 +123,8 @@ async function submitPosOrder() {
     await refreshActiveOrders();
   } catch (err) {
     posFormError.value = err instanceof Error ? err.message : '發生錯誤';
+  } finally {
+    posSubmitting.value = false;
   }
 }
 
@@ -290,11 +295,12 @@ function newOrder() {
           </label>
           <div v-if="posFormError" class="mt-2 text-xs font-extrabold text-[#e8384f]">{{ posFormError }}</div>
           <button
+            v-debounce
             @click="submitPosOrder"
-            :disabled="lines.length === 0"
+            :disabled="lines.length === 0 || posSubmitting"
             class="mt-3.5 w-full cursor-pointer rounded-xl border-[2.5px] border-[#1a1a1a] bg-[#ffdf3c] p-3.5 text-sm font-black text-[#1a1a1a] shadow-[3px_3px_0_#1a1a1a] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            送出訂單（現金）
+            {{ posSubmitting ? '處理中…' : '送出訂單（現金）' }}
           </button>
         </div>
       </div>

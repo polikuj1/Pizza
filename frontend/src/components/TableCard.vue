@@ -39,6 +39,7 @@ defineEmits<{ advance: [id: number]; clear: [tableNum: number] }>();
           <span class="text-[15px] font-black text-[#e8384f]">${{ order.total }}</span>
           <button
             v-if="order.status < 2"
+            v-debounce
             @click="$emit('advance', order.id)"
             class="cursor-pointer rounded-[10px] border-2 border-[#1a1a1a] bg-[#ffdf3c] px-3 py-1.5 text-xs font-extrabold text-[#1a1a1a]"
           >

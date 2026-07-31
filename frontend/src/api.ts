@@ -8,7 +8,7 @@ export class ApiError extends Error {
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function send<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}/api${path}`, {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -17,6 +17,22 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const body = await res.json();
   if (!res.ok) throw new ApiError(body.error ?? '發生錯誤', res.status);
   return body as T;
+}
+
+// 防重複送出的最後一道防線：同一把寫入請求（method + path + body 相同）還在飛的時候，
+// 後續呼叫直接共用同一個 promise，不會真的再打一次。網路慢時使用者狂點也只會建立一筆。
+// ponytail: 只在 in-flight 期間去重，不是 response cache；GET 不管（重複讀無害）
+const inflight = new Map<string, Promise<unknown>>();
+
+function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const method = options?.method ?? 'GET';
+  if (method === 'GET') return send<T>(path, options);
+  const key = `${method} ${path} ${String(options?.body ?? '')}`;
+  const existing = inflight.get(key);
+  if (existing) return existing as Promise<T>;
+  const pending = send<T>(path, options).finally(() => inflight.delete(key));
+  inflight.set(key, pending);
+  return pending;
 }
 
 function cartToItems(cart: Cart): CartItemInput[] {

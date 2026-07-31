@@ -133,7 +133,7 @@ async function deleteUser(user: StaffUser) {
         </label>
       </div>
       <div v-if="newUser.error" class="text-[13px] font-extrabold text-[#e8384f]">{{ newUser.error }}</div>
-      <button type="submit" class="w-full cursor-pointer rounded-xl border-[2.5px] border-[#1a1a1a] bg-[#ffdf3c] p-2.5 text-sm font-black text-[#1a1a1a]">新增</button>
+      <button v-debounce type="submit" class="w-full cursor-pointer rounded-xl border-[2.5px] border-[#1a1a1a] bg-[#ffdf3c] p-2.5 text-sm font-black text-[#1a1a1a]">新增</button>
     </form>
 
     <div class="flex flex-col gap-3.5">

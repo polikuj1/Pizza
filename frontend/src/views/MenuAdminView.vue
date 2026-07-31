@@ -161,6 +161,7 @@
         {{ newItem.error }}
       </div>
       <button
+        v-debounce
         @click="createItem"
         class="w-full cursor-pointer rounded-xl border-[2.5px] border-[#1a1a1a] bg-[#ffdf3c] p-2.5 text-sm font-black text-[#1a1a1a]"
       >

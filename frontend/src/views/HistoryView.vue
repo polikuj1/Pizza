@@ -4,13 +4,25 @@ import { useRouter } from 'vue-router';
 import { api } from '../api';
 import { handleLoadError } from '../composables/authGuard';
 import { channelLabel, itemsSummary, orderTypeColor, orderTypeLabel, paymentLabel, pickupLabel, timeLabel } from '../composables/presentation';
+import { hasPermission } from '../store/auth';
 import type { Order } from '../types';
 
 const router = useRouter();
 const orders = ref<Order[]>([]);
 const page = ref(1);
 const totalPages = ref(1);
+const deleteMode = ref(false);
 let timer: ReturnType<typeof setInterval> | undefined;
+
+async function remove(o: Order) {
+  if (!confirm(`確定要永久刪除訂單 #${o.id}（$${o.total}）嗎？此動作無法復原，統計數字也會跟著減少。`)) return;
+  try {
+    await api.deleteOrder(o.id);
+    await load();
+  } catch (err) {
+    handleLoadError(err, router);
+  }
+}
 
 async function load() {
   try {
@@ -36,7 +48,17 @@ onUnmounted(() => clearInterval(timer));
 
 <template>
   <main class="mx-auto max-w-[820px] px-5 pt-[26px] pb-[60px]">
-    <div class="brand-text mb-1 text-xl sm:text-[22px]">今日歷史訂單</div>
+    <div class="mb-1 flex items-center gap-3">
+      <div class="brand-text text-xl sm:text-[22px]">今日歷史訂單</div>
+      <button
+        v-if="hasPermission('admin')"
+        @click="deleteMode = !deleteMode"
+        class="cursor-pointer rounded-[10px] border-2 px-2.5 py-1 text-[11px] font-extrabold"
+        :class="deleteMode ? 'border-[#e8384f] bg-[#e8384f] text-white' : 'border-[#1a1a1a] bg-white text-[#1a1a1a]'"
+      >
+        {{ deleteMode ? '完成' : '刪除訂單' }}
+      </button>
+    </div>
     <div class="mb-[22px] text-[13px] font-bold text-[rgba(26,26,29,.55)]">已完成／已結案訂單紀錄</div>
 
     <div v-if="orders.length === 0" class="rounded-2xl border-[2.5px] border-[#1a1a1a] bg-white py-[60px] text-center text-sm text-[rgba(26,26,29,.5)]">今天還沒有已完成的訂單</div>
@@ -49,7 +71,21 @@ onUnmounted(() => clearInterval(timer));
             <span class="ml-2 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold text-white" :style="{ background: orderTypeColor(o) }">{{ orderTypeLabel(o) }}</span>
             <span v-if="channelLabel(o)" class="ml-1 rounded-full border-2 border-[#1a1a1a] px-2 py-0.5 text-[11px] font-extrabold text-[#1a1a1a]">{{ channelLabel(o) }}</span>
           </div>
-          <span class="text-xs font-extrabold text-[#3fae66]">已完成</span>
+          <span v-if="!deleteMode" class="text-xs font-extrabold text-[#3fae66]">已完成</span>
+          <button
+            v-else
+            @click="remove(o)"
+            aria-label="永久刪除訂單"
+            class="cursor-pointer rounded-[10px] border-2 border-[#e8384f] bg-white p-2 text-[#e8384f] hover:bg-[#fde8ea]"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18" />
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <line x1="10" y1="11" x2="10" y2="17" />
+              <line x1="14" y1="11" x2="14" y2="17" />
+            </svg>
+          </button>
         </div>
         <div class="mb-2 text-[13px] text-[rgba(26,26,29,.8)]">
           {{ o.customerName }}・{{ paymentLabel(o) }}
