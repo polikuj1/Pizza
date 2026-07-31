@@ -58,7 +58,7 @@
   async function submitTableOrder(cart: Cart, note: string, paid: boolean) {
     if (!drawerTableNum.value) return;
     try {
-      const order = await api.createPosOrder({
+      await api.createPosOrder({
         cart,
         orderType: 'dinein',
         table: drawerTableNum.value,
@@ -66,11 +66,8 @@
         pickupDate: null,
         pickupTime: null,
         note,
+        paid,
       });
-      // 訂單建立後，更新付款狀態
-      if (paid) {
-        await api.updateOrderPaid(order.id, true);
-      }
       closeDrawer();
       await load();
     } catch (err) {
