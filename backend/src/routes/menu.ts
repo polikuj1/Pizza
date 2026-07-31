@@ -74,13 +74,3 @@ menuRouter.patch(
     res.json(result.rows[0]);
   })
 );
-
-menuRouter.delete(
-  '/:id',
-  requirePermission('menu'),
-  ah(async (req, res) => {
-    // 軟刪除：設 enabled = false，不真的移除資料列（歷史訂單的 items 是獨立快照，不受影響）
-    await pool.query('UPDATE menu_items SET enabled = false WHERE id = $1', [req.params.id]);
-    res.json({ ok: true });
-  })
-);

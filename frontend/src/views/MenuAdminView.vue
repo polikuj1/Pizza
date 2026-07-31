@@ -65,13 +65,14 @@
     }
   }
 
-  async function remove(item: MenuItem) {
-    if (!confirm(`確定要停用「${item.zh}」嗎？顧客端與 POS 將不再顯示，可隨時重新啟用。`)) return;
+  // ponytail: 用 PATCH 送已儲存的 item（不是 draft），避免順手把未儲存的編輯一起寫進去
+  async function toggleEnabled(item: MenuItem) {
+    rowError[item.id] = "";
     try {
-      await api.deleteMenuItem(item.id);
+      await api.updateMenuItem(item.id, { ...item, enabled: !item.enabled });
       await load();
     } catch (err) {
-      handleLoadError(err, router);
+      rowError[item.id] = err instanceof Error ? err.message : "儲存失敗";
     }
   }
 
@@ -199,10 +200,11 @@
               >{{ item.id }}<span v-if="!item.enabled" class="ml-2 rounded-full bg-[rgba(26,26,29,.5)] px-2 py-0.5 text-[11px] font-extrabold text-white">已停用</span></span
             >
             <button
-              @click="remove(item)"
-              class="cursor-pointer rounded-[10px] border-2 border-[#1a1a1a] bg-white px-2.5 py-1.5 text-xs font-extrabold text-[#e8384f]"
+              @click="toggleEnabled(item)"
+              :class="item.enabled ? 'text-[#e8384f]' : 'text-[#1a1a1a]'"
+              class="cursor-pointer rounded-[10px] border-2 border-[#1a1a1a] bg-white px-2.5 py-1.5 text-xs font-extrabold"
             >
-              停用
+              {{ item.enabled ? "停用" : "啟用" }}
             </button>
           </div>
           <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
@@ -249,10 +251,6 @@
             <label class="flex items-center gap-1.5"
               ><input type="checkbox" v-model="drafts[item.id].soldOut" />
               已完售</label
-            >
-            <label class="flex items-center gap-1.5"
-              ><input type="checkbox" v-model="drafts[item.id].enabled" />
-              啟用中</label
             >
             <button
               @click="save(item.id)"

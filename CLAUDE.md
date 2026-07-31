@@ -29,7 +29,7 @@ Vite + Vue 3 + TypeScript，vue-router 分頁，無 Pinia（購物車/菜單用 
 | `/pos` | PosView | `pos` 權限 | 現場點餐：內用選桌號 / 外帶，送出後建立訂單。內用選到已有進行中訂單的桌號視為「加點」，不會被擋（紅點標示佔用中的桌號） |
 | `/tables` | TablesView | `tables` 權限 | 5 桌桌況總覽，依現場實際相對位置排列（前面 1、2 桌＋吧檯；後面 3、4 桌＋5 桌圓桌）。同一桌可能有多筆進行中訂單（加點，依下單順序顯示、第 2 筆起標「加點 #N」），各自可推進狀態；「結束用餐」一次清空該桌所有進行中訂單 |
 | `/history` | HistoryView | `history` 權限 | 已完成訂單歷史紀錄 |
-| `/menu-admin` | MenuAdminView | `menu` 權限 | 菜單管理：新增品項、調整價格/分類/描述、設定完售狀態、刪除品項 |
+| `/menu-admin` | MenuAdminView | `menu` 權限 | 菜單管理：新增品項、調整價格/分類/描述、設定完售狀態、停用／啟用品項（永久下架的軟刪除切換） |
 | `/users` | UsersView | `users` 權限 | 頁首有「顧客線上點餐」開關（切換 `storeOpen`，即時生效）。帳號管理：新增帳號、勾選各頁面權限、改密碼、刪除 |
 | `/stats` | StatsView | `stats` 權限 | 統計分析：當日／一週／一個月／自訂區間切換（單一共用切換器同時驅動三張圖；自訂區間選起訖日期後需按「查詢」才送出，不會即時抓資料），營收趨勢（折線）、內用/現場外帶/線上外帶佔比（環圈圖）、品項銷售排行（依銷售數量，水平長條圖，可切換「全部／Pizza／Drinks／Snacks」篩選，只影響這張圖）。圖表套件用 Chart.js + vue-chartjs（lazy-loaded，只有進這頁才會載入） |
 
@@ -54,7 +54,7 @@ Express + TypeScript，直接用 `pg` 下 SQL（無 ORM）。
 
 ### 資料表
 
-- `menu_items` — 菜單品項（id, zh, en, description, price, category, has_temp, sold_out, enabled）。`id` 是英文 slug（如 `margherita`），當自然鍵用，非代理鍵；購物車與訂單都用這個字串識別品項。`sold_out` 為 true 時，顧客端/POS 端不能再加入購物車，後端下單也會直接濾掉該品項——這是「今天賣完了，明天還會賣」的暫時狀態。`enabled` 是永久下架用的軟刪除欄位（預設 `true`），為 `false` 時顧客菜單／POS 完全不顯示（前端過濾），後端下單也會擋掉；菜單管理頁的「刪除」按鈕實際上是把這個欄位設成 `false`，不會真的移除資料列，隨時可以重新啟用
+- `menu_items` — 菜單品項（id, zh, en, description, price, category, has_temp, sold_out, enabled）。`id` 是英文 slug（如 `margherita`），當自然鍵用，非代理鍵；購物車與訂單都用這個字串識別品項。`sold_out` 為 true 時，顧客端/POS 端不能再加入購物車，後端下單也會直接濾掉該品項——這是「今天賣完了，明天還會賣」的暫時狀態。`enabled` 是永久下架用的軟刪除欄位（預設 `true`），為 `false` 時顧客菜單／POS 完全不顯示（前端過濾），後端下單也會擋掉；菜單管理頁每列的「停用／啟用」切換按鈕就是改這個欄位（走 `PATCH /api/menu/:id`，無確認對話框，不會真的移除資料列，隨時可以切回來）
 - `orders` — 訂單，`items` 為 JSONB 快照（下單當下計算好的明細，含當時的 `menu_items.id`），`id` 從 1001 起跳。快照不會回頭查 `menu_items`，改菜單不影響歷史訂單。`channel` 只用在 POS 建立的外帶訂單（`walkin` 現場／`ig` IG 私訊等店家手動輸入），內用與線上訂單一律是 `NULL`——`order_type` 決定出餐流程，`channel` 只是訂單來源，兩者刻意分開。`pickup_date`/`pickup_time` 皆為 `TEXT`（`"YYYY-MM-DD"`/`"HH:MM"`，非 DATE/TIME 型別，避免 pg 用伺服器時區轉換），外帶（`takeout`/`online`）才會用到，皆可為 `NULL`；`NULL` 的 `pickup_date` 代表「今天／立即」。訂單可能預先建立、取餐日在未來——`GET /api/orders?scope=active` 會濾掉 `pickup_date` 還沒到的訂單，等當天自然出現在佇列
 - `users` — 員工帳號（id, username, password_hash, permissions, created_at）。`password_hash` 格式為 `<salt>:<hash>`（`crypto.scrypt`）；`permissions` 為 `TEXT[]`，值對應前端路由 `meta.staff` 的權限 key
 - `settings` — 全站營運設定，固定只有一列（`id` 恆為 1，`CHECK (id = 1)` 保證單列）。目前只有 `store_open`（是否開放顧客線上點餐），未來若有更多全站開關可以加欄位到同一列
@@ -69,7 +69,6 @@ Express + TypeScript，直接用 `pg` 下 SQL（無 ORM）。
 | GET | `/api/menu` | 回傳 `{items, categories}`，`items` 含 `soldOut` |
 | POST | `/api/menu` 🔐menu | 新增品項 `{id, zh, en, description, price, category, hasTemp, soldOut}` |
 | PATCH | `/api/menu/:id` 🔐menu | 調整品項（同上欄位，`id` 不可變） |
-| DELETE | `/api/menu/:id` 🔐menu | 軟刪除（設 `enabled = false`），不會真的移除資料列 |
 | GET | `/api/orders?scope=active\|scheduled\|history` 🔒 | `active`：進行中且取餐日已到（或無取餐日）；`scheduled`：進行中但取餐日在未來（依取餐日期時間排序）；`history`：已完成，`?page=` 分頁（每頁 20 筆），只回傳當天完成的訂單 |
 | GET | `/api/orders/:id` | 單筆訂單（追蹤頁用，顧客免登入查自己的訂單） |
 | POST | `/api/orders` | 顧客線上下單。內用需選桌號（`order_type='dinein'`，並檢查該桌是否已有進行中訂單——顧客端不能加點，只能等桌況清空或洽店員，姓名/電話免填）；外帶（`order_type='online'`）電話必填、姓名選填。驗證：品項存在、購物車非空、公休時拒單。價格一律由後端依 `menu_items` 重新計算，不信任前端 |

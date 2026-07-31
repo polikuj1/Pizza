@@ -184,13 +184,33 @@ const itemRankingChartData = computed(() => {
   };
 });
 
+const itemTotalQty = computed(() => (summary.value?.itemRanking.items ?? []).reduce((n, r) => n + r.qty, 0));
+
+// 數量寫在長條尾端，區間拉大時不用 hover 就看得到累積量
+const itemQtyLabelsPlugin = {
+  id: 'itemQtyLabels',
+  afterDraw(chart: any) {
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = 'bold 12px sans-serif';
+    chart.getDatasetMeta(0).data.forEach((bar: any, i: number) => {
+      ctx.fillText(String(chart.data.datasets[0].data[i]), bar.x + 6, bar.y);
+    });
+    ctx.restore();
+  },
+};
+
 const lineOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
 const rankingOptions = {
   responsive: true,
   maintainAspectRatio: false,
   indexAxis: 'y' as const,
   plugins: { legend: { display: false } },
-  scales: { x: { ticks: { precision: 0 } } },
+  // grace 留白，數量標籤才不會被畫到圖表外面被切掉
+  scales: { x: { ticks: { precision: 0 }, grace: '8%' } },
 };
 const doughnutOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' as const } } };
 </script>
@@ -280,7 +300,7 @@ const doughnutOptions = { responsive: true, maintainAspectRatio: false, plugins:
           <span class="brand-text text-lg">品項銷售排行</span>
           <span class="rounded-full border-2 border-[#1a1a1a] bg-white px-2.5 py-0.5 text-xs font-extrabold">{{ summary?.itemRanking.items.length ?? 0 }} 項</span>
         </div>
-        <div class="mb-3.5 flex flex-wrap gap-2">
+        <div class="mb-3.5 flex flex-wrap items-center gap-2">
           <button
             v-for="opt in itemCategoryOptions"
             :key="opt.id"
@@ -290,12 +310,13 @@ const doughnutOptions = { responsive: true, maintainAspectRatio: false, plugins:
           >
             {{ opt.label }}
           </button>
+          <span class="ml-auto text-[13px] font-extrabold">共 {{ itemTotalQty.toLocaleString('zh-TW') }} 份</span>
         </div>
         <div v-if="!hasItems" class="rounded-2xl border-[2.5px] border-[#1a1a1a] bg-white py-[60px] text-center text-sm text-[rgba(26,26,29,.5)]">
           此區間尚無銷售紀錄
         </div>
         <div v-else class="h-[400px]">
-          <Bar :data="itemRankingChartData" :options="rankingOptions" />
+          <Bar :data="itemRankingChartData" :options="rankingOptions" :plugins="[itemQtyLabelsPlugin]" />
         </div>
       </div>
     </template>

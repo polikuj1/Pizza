@@ -32,7 +32,6 @@ export const api = {
   createMenuItem: (payload: MenuItem) => request<MenuItem>('/menu', { method: 'POST', body: JSON.stringify(payload) }),
   updateMenuItem: (id: string, payload: Omit<MenuItem, 'id'>) =>
     request<MenuItem>(`/menu/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
-  deleteMenuItem: (id: string) => request<{ ok: true }>(`/menu/${id}`, { method: 'DELETE' }),
   getOrders: (scope: 'active') => request<Order[]>(`/orders?scope=${scope}`),
   getScheduledOrders: () => request<Order[]>('/orders?scope=scheduled'),
   getOrderHistory: (page: number) => request<OrderHistoryPage>(`/orders?scope=history&page=${page}`),
