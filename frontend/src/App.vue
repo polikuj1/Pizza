@@ -4,13 +4,18 @@ import { useRoute, useRouter } from 'vue-router';
 import AppHeader from './components/AppHeader.vue';
 import BackToTop from './components/BackToTop.vue';
 import CartDrawer from './components/CartDrawer.vue';
+import UpdateNotification from './components/UpdateNotification.vue';
 import { loadCatalog } from './store/catalog';
 import { ensureAuthChecked, hasPermission, STAFF_NAV } from './store/auth';
+import { useVersionCheck } from './composables/versionCheck';
 
 const route = useRoute();
 const router = useRouter();
 const isCustomerFacing = computed(() => !!route.meta.customerFacing);
 const footerNav = computed(() => STAFF_NAV.filter((tab) => hasPermission(tab.permission)));
+
+// 版本檢查
+const { hasNewVersion } = useVersionCheck();
 
 onMounted(() => {
   loadCatalog();
@@ -24,6 +29,7 @@ onMounted(() => {
     <router-view />
     <CartDrawer />
     <BackToTop />
+    <UpdateNotification :show="hasNewVersion" />
     <footer v-if="isCustomerFacing" class="flex flex-wrap justify-center gap-4 p-5 text-center">
       <template v-if="footerNav.length > 0">
         <a
