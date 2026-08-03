@@ -27,11 +27,11 @@ Vite + Vue 3 + TypeScript，vue-router 分頁，無 Pinia（購物車/菜單用 
 | `/login` | LoginView | 公開 | 員工登入 |
 | `/admin` | AdminView | `admin` 權限 | 當日訂單佇列（已接單／製作中兩欄，製作中依下單時間由舊到新排、方便照順序出餐；取餐日在未來的訂單不會出現）＋已排程訂單列表（取餐日未到的訂單，供確認是否存成功，可編輯垃圾桶圖示刪除整筆訂單），可推進狀態、勾選品項已出餐，每 5 秒輪詢 |
 | `/pos` | PosView | `pos` 權限 | 現場點餐：內用選桌號 / 外帶，送出後建立訂單。內用選到已有進行中訂單的桌號視為「加點」，不會被擋（紅點標示佔用中的桌號） |
-| `/tables` | TablesView | `tables` 權限 | 5 桌桌況總覽，依現場實際相對位置排列（前面 1、2 桌＋吧檯；後面 3、4 桌＋5 桌圓桌）。同一桌可能有多筆進行中訂單（加點，依下單順序顯示、第 2 筆起標「加點 #N」），各自可推進狀態；「結束用餐」一次清空該桌所有進行中訂單 |
-| `/history` | HistoryView | `history` 權限 | 已完成訂單歷史紀錄 |
+| `/tables` | TablesView | `tables` 權限 | 5 桌桌況總覽，依現場實際相對位置排列（前面 1、2 桌＋吧檯；後面 3、4 桌＋5 桌圓桌）。同一桌可能有多筆進行中訂單（加點，依下單順序顯示、第 2 筆起標「加點 #N」），各自可推進狀態；「結束用餐」一次清空該桌所有進行中訂單。點卡片上的桌號（有訂單時）跳出換桌彈窗，整桌訂單一起搬到空桌（佔用中的桌號在彈窗裡是 disabled，後端也會擋） |
+| `/history` | HistoryView | `history` 權限 | 已完成訂單歷史紀錄，可切換今日／昨天／自訂區間（自訂需按「查詢」才送出），依 `completed_at` 過濾 |
 | `/menu-admin` | MenuAdminView | `menu` 權限 | 菜單管理：新增品項、調整價格/分類/描述、設定完售狀態、停用／啟用品項（永久下架的軟刪除切換） |
 | `/users` | UsersView | `users` 權限 | 頁首有「顧客線上點餐」開關（切換 `storeOpen`，即時生效）。帳號管理：新增帳號、勾選各頁面權限、改密碼、刪除 |
-| `/stats` | StatsView | `stats` 權限 | 統計分析：當日／一週／一個月／自訂區間切換（單一共用切換器同時驅動三張圖；自訂區間選起訖日期後需按「查詢」才送出，不會即時抓資料），營收趨勢（折線）、內用/現場外帶/線上外帶佔比（環圈圖）、品項銷售排行（依銷售數量，水平長條圖，可切換「全部／Pizza／Drinks／Snacks」篩選，只影響這張圖）。圖表套件用 Chart.js + vue-chartjs（lazy-loaded，只有進這頁才會載入） |
+| `/stats` | StatsView | `stats` 權限 | 統計分析：頁首的當日／一週／一個月／自訂區間切換器同時驅動上方三張總覽卡（總營收／所有訂單數／來店數）與下方三張圖；自訂區間選起訖日期後需按「查詢」才送出，不會即時抓資料），營收趨勢（折線）、內用/現場外帶/線上外帶佔比（環圈圖）、品項銷售排行（依銷售數量，水平長條圖，可切換「全部／Pizza／Drinks／Snacks」篩選，只影響這張圖）。圖表套件用 Chart.js + vue-chartjs（lazy-loaded，只有進這頁才會載入） |
 
 購物車、菜單資料為前端 in-memory 狀態，重新整理頁面會清空（與原始 prototype 行為一致，未做 localStorage 持久化）。
 
@@ -69,12 +69,13 @@ Express + TypeScript，直接用 `pg` 下 SQL（無 ORM）。
 | GET | `/api/menu` | 回傳 `{items, categories}`，`items` 含 `soldOut` |
 | POST | `/api/menu` 🔐menu | 新增品項 `{id, zh, en, description, price, category, hasTemp, soldOut}` |
 | PATCH | `/api/menu/:id` 🔐menu | 調整品項（同上欄位，`id` 不可變） |
-| GET | `/api/orders?scope=active\|scheduled\|history` 🔒 | `active`：進行中且取餐日已到（或無取餐日）；`scheduled`：進行中但取餐日在未來（依取餐日期時間排序）；`history`：已完成，`?page=` 分頁（每頁 20 筆），只回傳當天完成的訂單 |
+| GET | `/api/orders?scope=active\|scheduled\|history` 🔒 | `active`：進行中且取餐日已到（或無取餐日）；`scheduled`：進行中但取餐日在未來（依取餐日期時間排序）；`history`：已完成，`?page=` 分頁（每頁 20 筆），可加 `?start=&end=`（`YYYY-MM-DD`，含頭尾，依 `completed_at` 台北時區日期過濾），未帶或格式不合法時只回傳當天完成的訂單 |
 | GET | `/api/orders/:id` | 單筆訂單（追蹤頁用，顧客免登入查自己的訂單） |
 | POST | `/api/orders` | 顧客線上下單。內用需選桌號（`order_type='dinein'`，並檢查該桌是否已有進行中訂單——顧客端不能加點，只能等桌況清空或洽店員，姓名/電話免填）；外帶（`order_type='online'`）電話必填、姓名選填。驗證：品項存在、購物車非空、公休時拒單。價格一律由後端依 `menu_items` 重新計算，不信任前端 |
 | POST | `/api/orders/pos` 🔒 | 現場 POS 下單。內用選桌號**不會**檢查該桌是否已有進行中訂單——同桌可以累積多筆（加點），無上限；外帶需選 `channel`（`walkin`/`ig`） |
 | PATCH | `/api/orders/:id/advance` 🔒 | 狀態 +1（上限 3）；跨過 2/3 時自動補 `served_at`/`completed_at`。外帶／線上訂單從「製作中」推進會直接跳到「已完成」（略過「餐點已出」），`served_at`/`completed_at` 用同一個 `now()` 寫入、兩者時間相同；內用訂單仍只能推進到「餐點已出」 |
 | PATCH | `/api/orders/:id/clear` 🔒 | 直接設為已完成（單筆訂單） |
+| PATCH | `/api/orders/table/:tableNum/move` 🔒 | `{to}`，換桌：一個 `UPDATE` 把該桌所有 `status<3` 的內用訂單搬到 `to` 桌（同時改寫 `customer_name`）。目標桌必須是空桌，已有進行中訂單則回 400（不做合併） |
 | PATCH | `/api/orders/table/:tableNum/clear` 🔒 | 一次把該桌所有 `status<3` 的內用訂單設為已完成（桌況頁「結束用餐・清空整桌」用，一個 `UPDATE` 原子操作，取代逐筆呼叫上面那支） |
 | DELETE | `/api/orders/:id` 🔐admin | 硬刪除，整列移除（已排程訂單列表的垃圾桶用；跟 `menu_items`/`users` 的軟刪除不同，訂單沒有其他地方引用它） |
 | POST | `/api/auth/login` | `{username, password}`，帳密核對 `users` 表，成功後設定 httpOnly session cookie，回傳 `{ok, permissions}` |

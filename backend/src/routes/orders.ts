@@ -65,6 +65,11 @@ async function buildLines(cartItems: CartItemInput[]): Promise<OrderLine[]> {
 // dine-in orders are cleared via /clear instead of advancing through the queue past "餐點已出"
 const MAX_STATUS = 3;
 const HISTORY_PAGE_SIZE = 20;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseDate(q: unknown): string | null {
+  return typeof q === 'string' && DATE_RE.test(q) ? q : null;
+}
 
 ordersRouter.get(
   '/',
@@ -74,13 +79,19 @@ ordersRouter.get(
     if (scope === 'history') {
       const page = Math.max(1, Number(req.query.page) || 1);
       const offset = (page - 1) * HISTORY_PAGE_SIZE;
+      // start/end（YYYY-MM-DD，含頭尾）皆為選填，未帶或格式不合法時等同「今天」
+      let start = parseDate(req.query.start);
+      let end = parseDate(req.query.end);
+      if (start && end && start > end) return res.status(400).json({ error: '起始日期不能晚於結束日期' });
+      if (!start || !end) start = end = null;
       const result = await pool.query(
         `SELECT *, COUNT(*) OVER() AS total_count FROM orders
          WHERE status = $1
-           AND completed_at >= date_trunc('day', now() AT TIME ZONE 'Asia/Taipei') AT TIME ZONE 'Asia/Taipei'
+           AND completed_at >= (COALESCE($4::date, (now() AT TIME ZONE 'Asia/Taipei')::date))::timestamp AT TIME ZONE 'Asia/Taipei'
+           AND completed_at < (COALESCE($5::date, (now() AT TIME ZONE 'Asia/Taipei')::date) + 1)::timestamp AT TIME ZONE 'Asia/Taipei'
          ORDER BY completed_at DESC
          LIMIT $2 OFFSET $3`,
-        [MAX_STATUS, HISTORY_PAGE_SIZE, offset]
+        [MAX_STATUS, HISTORY_PAGE_SIZE, offset, start, end]
       );
       const total = result.rows[0] ? Number(result.rows[0].total_count) : 0;
       return res.json({
@@ -267,6 +278,31 @@ ordersRouter.patch(
        WHERE order_type = 'dinein' AND table_num = $1 AND status < $2
        RETURNING *`,
       [tableNum, MAX_STATUS]
+    );
+    res.json(result.rows.map(rowToOrder));
+  })
+);
+
+// 換桌：把該桌所有進行中的內用訂單整批搬到另一桌（目標桌必須是空桌，不做合併）
+ordersRouter.patch(
+  '/table/:tableNum/move',
+  requireStaffAuth,
+  ah(async (req, res) => {
+    const from = Number(req.params.tableNum);
+    const to = Number(req.body.to);
+    if (!TABLES.includes(from) || !TABLES.includes(to)) return res.status(400).json({ error: '桌號不存在' });
+    if (from === to) return res.status(400).json({ error: '請選擇不同的桌號' });
+    const occupied = await pool.query(
+      "SELECT 1 FROM orders WHERE order_type = 'dinein' AND table_num = $1 AND status < $2",
+      [to, MAX_STATUS]
+    );
+    if ((occupied.rowCount ?? 0) > 0) return res.status(400).json({ error: '目標桌已有進行中的訂單，請先結束用餐' });
+    // 名稱在 JS 組好再帶進來：SQL 裡用 '內用 ' || $2 會讓 pg 無法決定 $2 型別（unknown || param 有多個候選運算子）
+    const result = await pool.query(
+      `UPDATE orders SET table_num = $2, customer_name = $3
+       WHERE order_type = 'dinein' AND table_num = $1 AND status < $4
+       RETURNING *`,
+      [from, to, `內用 ${to} 桌`, MAX_STATUS]
     );
     res.json(result.rows.map(rowToOrder));
   })

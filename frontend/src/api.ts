@@ -50,7 +50,8 @@ export const api = {
     request<MenuItem>(`/menu/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
   getOrders: (scope: 'active') => request<Order[]>(`/orders?scope=${scope}`),
   getScheduledOrders: () => request<Order[]>('/orders?scope=scheduled'),
-  getOrderHistory: (page: number) => request<OrderHistoryPage>(`/orders?scope=history&page=${page}`),
+  getOrderHistory: (page: number, start?: string, end?: string) =>
+    request<OrderHistoryPage>(`/orders?scope=history&page=${page}${start && end ? `&start=${start}&end=${end}` : ''}`),
   getOrder: (id: number) => request<Order>(`/orders/${id}`),
   createOrder: (payload: {
     cart: Cart;
@@ -83,6 +84,8 @@ export const api = {
   advanceOrder: (id: number) => request<Order>(`/orders/${id}/advance`, { method: 'PATCH' }),
   clearOrder: (id: number) => request<Order>(`/orders/${id}/clear`, { method: 'PATCH' }),
   clearTable: (tableNum: number) => request<Order[]>(`/orders/table/${tableNum}/clear`, { method: 'PATCH' }),
+  moveTable: (from: number, to: number) =>
+    request<Order[]>(`/orders/table/${from}/move`, { method: 'PATCH', body: JSON.stringify({ to }) }),
   updateOrderPaid: (id: number, paid: boolean) => request<Order>(`/orders/${id}/paid`, { method: 'PATCH', body: JSON.stringify({ paid }) }),
   deleteOrder: (id: number) => request<{ ok: true }>(`/orders/${id}`, { method: 'DELETE' }),
 

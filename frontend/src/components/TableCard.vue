@@ -1,12 +1,26 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { STATUS_LABELS, STATUS_COLORS, itemsSummary, timeLabel } from '../composables/presentation';
+import { STATUS_LABELS, STATUS_COLORS, TABLES, itemsSummary, timeLabel } from '../composables/presentation';
 import type { TableCell } from '../types';
 
-const { cell, round = false } = defineProps<{ cell: TableCell; round?: boolean }>();
-const emit = defineEmits<{ advance: [id: number]; clear: [tableNum: number]; clickTable: [tableNum: number]; updatePaid: [id: number, paid: boolean] }>();
+const { cell, round = false, occupiedTables = [] } = defineProps<{ cell: TableCell; round?: boolean; occupiedTables?: number[] }>();
+const emit = defineEmits<{
+  advance: [id: number];
+  clear: [tableNum: number];
+  clickTable: [tableNum: number];
+  updatePaid: [id: number, paid: boolean];
+  move: [from: number, to: number];
+}>();
 
 const showPaymentOverlay = ref(false);
+const showMoveOverlay = ref(false);
+
+const moveTargets = computed(() => TABLES.filter((n) => n !== cell.num));
+
+function moveTo(target: number) {
+  showMoveOverlay.value = false;
+  emit('move', cell.num, target);
+}
 
 const allPaid = computed(() => {
   if (!cell.occupied) return true;
@@ -41,7 +55,15 @@ function updatePaymentStatus(orderId: number, paid: boolean) {
       {{ allPaid ? '已結' : '未結' }}
     </button>
     <div class="mb-2.5 flex items-center justify-between" :class="{ 'flex-col gap-1': round }">
-      <span class="brand-text text-xl">{{ cell.num }} 桌</span>
+      <button
+        v-if="cell.occupied"
+        @click="showMoveOverlay = true"
+        title="點擊換桌"
+        class="brand-text cursor-pointer rounded-lg border-2 border-dashed border-[rgba(26,26,29,.35)] px-2 py-0.5 text-xl hover:border-[#1a1a1a] hover:bg-[rgba(255,223,60,.35)]"
+      >
+        {{ cell.num }} 桌
+      </button>
+      <span v-else class="brand-text text-xl">{{ cell.num }} 桌</span>
       <div class="flex items-center gap-2">
         <span v-if="cell.occupied" class="rounded-full border-2 border-[#1a1a1a] px-2.5 py-1 text-[11px] font-extrabold text-[#1a1a1a]">
           {{ cell.orders.length }} 筆訂單中
@@ -101,6 +123,45 @@ function updatePaymentStatus(orderId: number, paid: boolean) {
       </button>
     </template>
     <div v-else class="py-[30px] text-center text-[13px] font-bold text-[rgba(26,26,29,.4)]">空桌</div>
+
+    <!-- 換桌蓋板 -->
+    <Transition name="fade">
+      <div
+        v-if="showMoveOverlay && cell.occupied"
+        @click.self="showMoveOverlay = false"
+        :class="round ? 'rounded-full' : 'rounded-2xl'"
+        class="absolute inset-0 z-20 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
+      >
+        <div class="relative w-full max-w-[300px] rounded-xl border-[2.5px] border-[#1a1a1a] bg-white p-5 shadow-xl">
+          <button
+            @click="showMoveOverlay = false"
+            class="absolute -right-2 -top-2 flex size-10 cursor-pointer items-center justify-center rounded-full border-2 border-[#1a1a1a] bg-[#e8384f] text-2xl font-black text-white shadow-md hover:bg-[#d32f3f]"
+          >
+            ×
+          </button>
+
+          <div class="mb-4 text-center">
+            <div class="brand-text text-xl">{{ cell.num }} 桌換桌</div>
+            <div class="mt-1 text-[11px] font-bold text-[rgba(26,26,29,.5)]">
+              整桌 {{ cell.orders.length }} 筆訂單一起搬過去
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <button
+              v-for="target in moveTargets"
+              :key="target"
+              @click="moveTo(target)"
+              :disabled="occupiedTables.includes(target)"
+              class="cursor-pointer rounded-lg border-2 border-[#1a1a1a] bg-white px-3 py-2.5 text-sm font-extrabold text-[#1a1a1a] hover:bg-[#ffdf3c] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
+            >
+              {{ target }} 桌
+              <span v-if="occupiedTables.includes(target)" class="block text-[10px] font-bold text-[#e8384f]">佔用中</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <!-- 付款狀態蓋板 -->
     <Transition name="fade">

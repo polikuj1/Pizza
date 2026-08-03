@@ -27,8 +27,6 @@ const itemCategoryOptions = computed(() => [{ id: 'all', label: '全部' }, ...c
 const presetSummary = ref<StatsSummary | null>(null);
 const customSummary = ref<StatsSummary | null>(null);
 const summary = computed(() => (range.value === 'custom' ? customSummary.value : presetSummary.value));
-// 頁面頂部的「當日」總覽卡跟下面圖表的區間切換器無關，固定抓 range=day，不跟著 range 重抓
-const todaySummary = ref<StatsSummary | null>(null);
 
 async function load() {
   try {
@@ -41,18 +39,7 @@ async function load() {
   }
 }
 
-async function loadToday() {
-  try {
-    todaySummary.value = await api.getStatsSummary('day');
-  } catch (err) {
-    handleLoadError(err, router);
-  }
-}
-
-onMounted(() => {
-  load();
-  loadToday();
-});
+onMounted(load);
 
 const customStart = ref('');
 const customEnd = ref('');
@@ -100,10 +87,10 @@ watch(itemCategory, () => {
 // 還沒查過自訂區間時顯示提示，而不是空白或誤導性地沿用預設區間的圖表
 const showCustomPrompt = computed(() => range.value === 'custom' && customSummary.value === null);
 
-const todayRevenue = computed(() => (todaySummary.value?.revenue.buckets ?? []).reduce((n, b) => n + b.revenue, 0));
-const todayOrderCount = computed(() => (todaySummary.value?.revenue.buckets ?? []).reduce((n, b) => n + b.orderCount, 0));
-const todayDineinCount = computed(
-  () => todaySummary.value?.orderTypes.breakdown.find((b) => b.orderType === 'dinein')?.orderCount ?? 0
+const totalRevenue = computed(() => (summary.value?.revenue.buckets ?? []).reduce((n, b) => n + b.revenue, 0));
+const totalOrderCount = computed(() => (summary.value?.revenue.buckets ?? []).reduce((n, b) => n + b.orderCount, 0));
+const dineinCount = computed(
+  () => summary.value?.orderTypes.breakdown.find((b) => b.orderType === 'dinein')?.orderCount ?? 0
 );
 
 const hasRevenue = computed(() => (summary.value?.revenue.buckets ?? []).some((b) => b.revenue > 0));
@@ -220,21 +207,6 @@ const doughnutOptions = { responsive: true, maintainAspectRatio: false, plugins:
     <div class="brand-text mb-1 text-xl sm:text-[22px]">統計分析</div>
     <div class="mb-[22px] text-[13px] font-bold text-[rgba(26,26,29,.55)]">營收趨勢、訂單類型佔比、品項銷售排行</div>
 
-    <div class="mb-5 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-      <div class="rounded-2xl border-[2.5px] border-[#1a1a1a] bg-white p-4 px-5">
-        <div class="text-[13px] font-bold text-[rgba(26,26,29,.55)]">當日總營收</div>
-        <div class="mt-1 text-3xl font-black text-[#e8384f]">${{ todayRevenue.toLocaleString('zh-TW') }}</div>
-      </div>
-      <div class="rounded-2xl border-[2.5px] border-[#1a1a1a] bg-white p-4 px-5">
-        <div class="text-[13px] font-bold text-[rgba(26,26,29,.55)]">當日所有訂單數</div>
-        <div class="mt-1 text-3xl font-black text-[#4fb8e8]">{{ todayOrderCount.toLocaleString('zh-TW') }}</div>
-      </div>
-      <div class="rounded-2xl border-[2.5px] border-[#1a1a1a] bg-white p-4 px-5">
-        <div class="text-[13px] font-bold text-[rgba(26,26,29,.55)]">當日來店數（內用）</div>
-        <div class="mt-1 text-3xl font-black text-[#3fae66]">{{ todayDineinCount.toLocaleString('zh-TW') }}</div>
-      </div>
-    </div>
-
     <div class="mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
       <button
         v-for="opt in RANGE_OPTIONS"
@@ -271,6 +243,21 @@ const doughnutOptions = { responsive: true, maintainAspectRatio: false, plugins:
       請選擇日期區間並點擊查詢
     </div>
     <template v-else>
+      <div class="mb-5 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+        <div class="rounded-2xl border-[2.5px] border-[#1a1a1a] bg-white p-4 px-5">
+          <div class="text-[13px] font-bold text-[rgba(26,26,29,.55)]">總營收</div>
+          <div class="mt-1 text-3xl font-black text-[#e8384f]">${{ totalRevenue.toLocaleString('zh-TW') }}</div>
+        </div>
+        <div class="rounded-2xl border-[2.5px] border-[#1a1a1a] bg-white p-4 px-5">
+          <div class="text-[13px] font-bold text-[rgba(26,26,29,.55)]">所有訂單數</div>
+          <div class="mt-1 text-3xl font-black text-[#4fb8e8]">{{ totalOrderCount.toLocaleString('zh-TW') }}</div>
+        </div>
+        <div class="rounded-2xl border-[2.5px] border-[#1a1a1a] bg-white p-4 px-5">
+          <div class="text-[13px] font-bold text-[rgba(26,26,29,.55)]">來店數（內用）</div>
+          <div class="mt-1 text-3xl font-black text-[#3fae66]">{{ dineinCount.toLocaleString('zh-TW') }}</div>
+        </div>
+      </div>
+
       <div class="mb-5 rounded-2xl border-[2.5px] border-[#1a1a1a] bg-white p-4 px-5">
         <div class="mb-3 flex items-center gap-2">
           <span class="brand-text text-lg">營收趨勢</span>

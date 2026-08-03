@@ -45,6 +45,10 @@
     return map;
   });
 
+  const occupiedTables = computed(() =>
+    TABLES.filter((n) => tableMap.value[n].occupied),
+  );
+
   function openDrawer(tableNum: number) {
     drawerTableNum.value = tableNum;
     drawerHasOrders.value = tableMap.value[tableNum].occupied;
@@ -92,6 +96,15 @@
       handleLoadError(err, router);
     }
   }
+  async function moveTable(from: number, to: number) {
+    if (!confirm(`確定把 ${from} 桌的訂單全部搬到 ${to} 桌嗎？`)) return;
+    try {
+      await api.moveTable(from, to);
+      await load();
+    } catch (err) {
+      handleLoadError(err, router);
+    }
+  }
   async function updatePaid(id: number, paid: boolean) {
     try {
       await api.updateOrderPaid(id, paid);
@@ -121,6 +134,8 @@
             @clear="clearTable"
             @click-table="openDrawer"
             @update-paid="updatePaid"
+            @move="moveTable"
+            :occupied-tables="occupiedTables"
           />
           <TableCard
             :cell="tableMap[2]"
@@ -128,6 +143,8 @@
             @clear="clearTable"
             @click-table="openDrawer"
             @update-paid="updatePaid"
+            @move="moveTable"
+            :occupied-tables="occupiedTables"
           />
           <div
             class="col-span-2 flex h-16 items-center justify-center rounded-2xl border-2 border-dashed border-[rgba(26,26,29,.35)] bg-[rgba(26,26,29,.04)] text-xs font-bold text-[rgba(26,26,29,.45)]"
@@ -148,6 +165,8 @@
             @clear="clearTable"
             @click-table="openDrawer"
             @update-paid="updatePaid"
+            @move="moveTable"
+            :occupied-tables="occupiedTables"
           />
           <TableCard
             :cell="tableMap[4]"
@@ -155,6 +174,8 @@
             @clear="clearTable"
             @click-table="openDrawer"
             @update-paid="updatePaid"
+            @move="moveTable"
+            :occupied-tables="occupiedTables"
           />
           <div></div>
           <TableCard
@@ -164,6 +185,8 @@
             @clear="clearTable"
             @click-table="openDrawer"
             @update-paid="updatePaid"
+            @move="moveTable"
+            :occupied-tables="occupiedTables"
           />
         </div>
       </section>
