@@ -50,11 +50,15 @@ function updatePaymentStatus(orderId: number, paid: boolean) {
       v-if="cell.occupied"
       @click="openPaymentOverlay"
       :class="allPaid ? 'bg-[#4ade80] text-[#1a1a1a]' : 'bg-[#fbbf24] text-[#1a1a1a]'"
-      class="absolute -left-1 -top-1 origin-top-left -rotate-12 cursor-pointer rounded-md border-2 border-[#1a1a1a] px-2 py-0.5 text-[10px] font-extrabold shadow-sm transition-transform hover:scale-110"
+      class="absolute -left-2 -top-3.5 origin-top-left -rotate-12 cursor-pointer rounded-md border-2 border-[#1a1a1a] px-2.5 py-1 text-[11px] font-extrabold shadow-sm transition-transform hover:scale-110"
     >
       {{ allPaid ? '已結' : '未結' }}
     </button>
-    <div class="mb-2.5 flex items-center justify-between" :class="{ 'flex-col gap-1': round }">
+    <!-- 有結帳 badge 時把標題往下推，平板上兩個點擊區才不會擠在一起 -->
+    <div
+      class="mb-2.5 flex items-center justify-between"
+      :class="[{ 'flex-col gap-1': round }, cell.occupied ? 'mt-2.5' : '']"
+    >
       <button
         v-if="cell.occupied"
         @click="showMoveOverlay = true"

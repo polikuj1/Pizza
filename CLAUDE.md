@@ -90,6 +90,10 @@ Express + TypeScript，直接用 `pg` 下 SQL（無 ORM）。
 🔒 = 需要 `requireStaffAuth`（帶有效 session cookie，任何員工皆可）
 🔐`<permission>` = 需要 `requirePermission('<permission>')`（僅具該權限的員工）
 
+### 每日自動結案（pg_cron）
+
+正式環境的 Postgres 是 Supabase，用 `pg_cron` 排了一個 job（`close-day-orders`，見 `migrations/010_close_day_cron.sql`）：每天台北 23:59（cron 表達式是 UTC 的 `59 15 * * *`）把所有 `status < 3` 的訂單設為 3（已完成），`served_at`/`completed_at` 用當下時間補上，所以時間戳記落在當天；同時在 `note` 寫入「系統自動結單」（原本有備註則以「・」接在後面），方便事後分辨哪些是人工結案、哪些是排程掃掉的。`pickup_date` 在未來的預約單排除，不會被提前結案。排程執行在資料庫端，與後端服務是否閒置無關。查執行紀錄：`select * from cron.job_run_details order by start_time desc limit 10;`
+
 ### 狀態機
 
 `0 已接單 → 1 製作中 → 2 餐點已出 → 3 已完成`
