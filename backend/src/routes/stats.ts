@@ -35,34 +35,36 @@ function daysAgoTaipei(daysBack: number): string {
   return dt.toISOString().slice(0, 10);
 }
 
-async function queryRevenueDay() {
-  const result = await pool.query(`
-    WITH hours AS (SELECT generate_series(0, 23) AS h),
-    filtered AS (
-      SELECT date_part('hour', created_at AT TIME ZONE 'Asia/Taipei')::int AS h, total
-      FROM orders
-      WHERE created_at >= date_trunc('day', now() AT TIME ZONE 'Asia/Taipei') AT TIME ZONE 'Asia/Taipei'
-        AND created_at < (date_trunc('day', now() AT TIME ZONE 'Asia/Taipei') AT TIME ZONE 'Asia/Taipei') + interval '1 day'
-    )
-    SELECT
-      to_char(make_time(hours.h, 0, 0), 'HH24:00') AS label,
-      NULL::text AS date,
-      COALESCE(SUM(filtered.total), 0)::int AS revenue,
-      COUNT(filtered.total)::int AS "orderCount"
-    FROM hours LEFT JOIN filtered ON filtered.h = hours.h
-    GROUP BY hours.h ORDER BY hours.h
-  `);
+// 營業日：外帶／線上填了取餐日就算在取餐日（預約單不該記在下單日的營收），
+// 其餘（內用、無取餐日＝當天立即）沿用下單日。三張圖與總覽卡都用同一個定義。
+const BIZ_DATE = `COALESCE(NULLIF(pickup_date, '')::date, (created_at AT TIME ZONE 'Asia/Taipei')::date)`;
+// 有取餐時間就照取餐時間分時段，否則照下單時間
+const BIZ_HOUR = `COALESCE(NULLIF(left(pickup_time, 2), '')::int, date_part('hour', created_at AT TIME ZONE 'Asia/Taipei')::int)`;
+
+async function queryRevenueDay(day: string) {
+  const result = await pool.query(
+    `WITH hours AS (SELECT generate_series(0, 23) AS h),
+     filtered AS (
+       SELECT ${BIZ_HOUR} AS h, total FROM orders WHERE ${BIZ_DATE} = $1::date
+     )
+     SELECT
+       to_char(make_time(hours.h, 0, 0), 'HH24:00') AS label,
+       NULL::text AS date,
+       COALESCE(SUM(filtered.total), 0)::int AS revenue,
+       COUNT(filtered.total)::int AS "orderCount"
+     FROM hours LEFT JOIN filtered ON filtered.h = hours.h
+     GROUP BY hours.h ORDER BY hours.h`,
+    [day]
+  );
   return result.rows;
 }
 
 async function queryRevenueRange(start: string, end: string) {
   const result = await pool.query(
-    `WITH days AS (SELECT generate_series($1::date, $2::date, interval '1 day') AS day_local),
+    `WITH days AS (SELECT generate_series($1::date, $2::date, interval '1 day')::date AS day_local),
      filtered AS (
-       SELECT date_trunc('day', created_at AT TIME ZONE 'Asia/Taipei') AS day_local, total
-       FROM orders
-       WHERE created_at >= (($1::date)::timestamp AT TIME ZONE 'Asia/Taipei')
-         AND created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Taipei')
+       SELECT ${BIZ_DATE} AS day_local, total FROM orders
+       WHERE ${BIZ_DATE} BETWEEN $1::date AND $2::date
      )
      SELECT
        to_char(d.day_local, 'MM/DD') AS label,
@@ -81,8 +83,7 @@ async function queryOrderTypesRange(start: string, end: string) {
     `WITH types AS (SELECT unnest($3::text[]) AS order_type),
      filtered AS (
        SELECT order_type, total FROM orders
-       WHERE created_at >= (($1::date)::timestamp AT TIME ZONE 'Asia/Taipei')
-         AND created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Taipei')
+       WHERE ${BIZ_DATE} BETWEEN $1::date AND $2::date
      )
      SELECT
        t.order_type AS "orderType",
@@ -101,8 +102,7 @@ async function queryItemRankingRange(start: string, end: string, category: strin
   const result = await pool.query(
     `WITH filtered AS (
        SELECT items FROM orders
-       WHERE created_at >= (($1::date)::timestamp AT TIME ZONE 'Asia/Taipei')
-         AND created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Taipei')
+       WHERE ${BIZ_DATE} BETWEEN $1::date AND $2::date
      ),
      lines AS (
        SELECT elem->>'id' AS item_id, elem->>'zh' AS item_zh,
@@ -147,7 +147,7 @@ statsRouter.get(
 
     const itemCategory = parseItemCategory(req.query.itemCategory);
     const [revenueBuckets, orderTypeBreakdown, itemRankingRows] = await Promise.all([
-      range === 'day' ? queryRevenueDay() : queryRevenueRange(start, end),
+      range === 'day' ? queryRevenueDay(start) : queryRevenueRange(start, end),
       queryOrderTypesRange(start, end),
       queryItemRankingRange(start, end, itemCategory),
     ]);
