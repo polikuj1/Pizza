@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { pool } from '../db';
-import { config, TABLES } from '../config';
+import { config, COUNTED_ORDER, TABLES } from '../config';
 import { ah } from '../asyncHandler';
 import { requirePermission, requireStaffAuth } from '../auth';
 import { getStoreOpen } from '../settings';
@@ -26,6 +26,7 @@ function rowToOrder(row: any): Order {
     pickupDate: row.pickup_date,
     pickupTime: row.pickup_time,
     paid: row.paid ?? false,
+    paymentStatus: row.payment_status ?? 'none',
     createdAt: row.created_at,
     servedAt: row.served_at,
     completedAt: row.completed_at,
@@ -107,6 +108,7 @@ ordersRouter.get(
       const result = await pool.query(
         `SELECT * FROM orders
          WHERE status < $1
+           AND ${COUNTED_ORDER}
            AND pickup_date > to_char(now() AT TIME ZONE 'Asia/Taipei', 'YYYY-MM-DD')
          ORDER BY pickup_date ASC, pickup_time ASC NULLS LAST, id ASC`,
         [MAX_STATUS]
@@ -117,6 +119,7 @@ ordersRouter.get(
     const result = await pool.query(
       `SELECT * FROM orders
        WHERE status < $1
+         AND ${COUNTED_ORDER}
          AND (pickup_date IS NULL OR pickup_date <= to_char(now() AT TIME ZONE 'Asia/Taipei', 'YYYY-MM-DD'))
        ORDER BY id ASC`,
       [MAX_STATUS]

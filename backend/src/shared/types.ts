@@ -27,6 +27,10 @@ export interface OrderLine {
 
 export type OrderChannel = 'walkin' | 'ig' | 'phone';
 
+// 線上金流狀態。'none' = 到店付款，不涉及線上金流（目前所有訂單都是這個值）。
+// 與 Order.paid 是不同概念：paid 是店員在 POS 手動勾的「現場已收錢」。
+export type PaymentStatus = 'none' | 'pending' | 'paid' | 'failed' | 'refunded';
+
 export interface Order {
   id: number;
   items: OrderLine[];
@@ -42,6 +46,7 @@ export interface Order {
   pickupDate: string | null;
   pickupTime: string | null;
   paid: boolean;
+  paymentStatus: PaymentStatus;
   createdAt: string;
   servedAt: string | null;
   completedAt: string | null;

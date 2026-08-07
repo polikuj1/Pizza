@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { pool } from '../db';
 import { ah } from '../asyncHandler';
 import { requirePermission } from '../auth';
-import { CATEGORIES } from '../config';
+import { CATEGORIES, COUNTED_ORDER } from '../config';
 
 export const statsRouter = Router();
 
@@ -45,7 +45,7 @@ async function queryRevenueDay(day: string) {
   const result = await pool.query(
     `WITH hours AS (SELECT generate_series(0, 23) AS h),
      filtered AS (
-       SELECT ${BIZ_HOUR} AS h, total FROM orders WHERE ${BIZ_DATE} = $1::date
+       SELECT ${BIZ_HOUR} AS h, total FROM orders WHERE ${BIZ_DATE} = $1::date AND ${COUNTED_ORDER}
      )
      SELECT
        to_char(make_time(hours.h, 0, 0), 'HH24:00') AS label,
@@ -64,7 +64,7 @@ async function queryRevenueRange(start: string, end: string) {
     `WITH days AS (SELECT generate_series($1::date, $2::date, interval '1 day')::date AS day_local),
      filtered AS (
        SELECT ${BIZ_DATE} AS day_local, total FROM orders
-       WHERE ${BIZ_DATE} BETWEEN $1::date AND $2::date
+       WHERE ${BIZ_DATE} BETWEEN $1::date AND $2::date AND ${COUNTED_ORDER}
      )
      SELECT
        to_char(d.day_local, 'MM/DD') AS label,
@@ -83,7 +83,7 @@ async function queryOrderTypesRange(start: string, end: string) {
     `WITH types AS (SELECT unnest($3::text[]) AS order_type),
      filtered AS (
        SELECT order_type, total FROM orders
-       WHERE ${BIZ_DATE} BETWEEN $1::date AND $2::date
+       WHERE ${BIZ_DATE} BETWEEN $1::date AND $2::date AND ${COUNTED_ORDER}
      )
      SELECT
        t.order_type AS "orderType",
@@ -102,7 +102,7 @@ async function queryItemRankingRange(start: string, end: string, category: strin
   const result = await pool.query(
     `WITH filtered AS (
        SELECT items FROM orders
-       WHERE ${BIZ_DATE} BETWEEN $1::date AND $2::date
+       WHERE ${BIZ_DATE} BETWEEN $1::date AND $2::date AND ${COUNTED_ORDER}
      ),
      lines AS (
        SELECT elem->>'id' AS item_id, elem->>'zh' AS item_zh,
