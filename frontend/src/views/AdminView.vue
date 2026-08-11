@@ -156,6 +156,15 @@
               >
             </div>
 
+            <div
+              v-if="order.note"
+              class="mb-3 rounded-lg border border-[rgba(26,26,29,.1)] bg-[rgba(255,223,60,.2)] px-2.5 py-1.5 text-xs leading-relaxed text-[rgba(26,26,29,.75)]"
+            >
+              <span class="font-extrabold text-[rgba(26,26,29,.85)]"
+                >備註：</span
+              >{{ order.note }}
+            </div>
+
             <div class="mb-3 flex flex-col gap-2">
               <label
                 v-for="item in order.items"
@@ -261,6 +270,14 @@
             class="mb-2.5 text-[13px] leading-relaxed text-[rgba(26,26,29,.7)]"
           >
             {{ itemsSummary(order) }}
+          </div>
+          <div
+            v-if="order.note"
+            class="mb-2.5 rounded-lg border border-[rgba(26,26,29,.1)] bg-[rgba(255,223,60,.2)] px-2.5 py-1.5 text-xs leading-relaxed text-[rgba(26,26,29,.75)]"
+          >
+            <span class="font-extrabold text-[rgba(26,26,29,.85)]"
+              >備註：</span
+            >{{ order.note }}
           </div>
           <div class="flex items-center justify-between">
             <span class="text-[15px] font-black text-[#e8384f]"
