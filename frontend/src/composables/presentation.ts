@@ -10,6 +10,17 @@ export function timeLabel(iso: string | null): string {
   return new Date(iso).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Taipei' });
 }
 
+export function dateTimeLabel(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('zh-TW', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Taipei',
+  });
+}
+
 export const ORDER_TYPE_COLORS: Record<Order['orderType'], string> = {
   dinein: '#e8384f',
   takeout: '#3fae66',

@@ -5,12 +5,12 @@
   import { handleLoadError } from "../composables/authGuard";
   import {
     channelLabel,
+    dateTimeLabel,
     itemsSummary,
     orderTypeColor,
     orderTypeLabel,
     paymentLabel,
     pickupLabel,
-    timeLabel,
   } from "../composables/presentation";
   import { hasPermission } from "../store/auth";
   import type { Order } from "../types";
@@ -269,9 +269,9 @@
           class="flex flex-col items-start justify-between gap-1 border-t border-dashed border-[rgba(26,26,29,.15)] pt-2.5 text-xs font-bold text-[rgba(26,26,29,.55)] sm:flex-row sm:items-center sm:gap-0"
         >
           <span
-            >下單 {{ timeLabel(o.createdAt) }}・出餐
-            {{ timeLabel(o.servedAt) }}・完成
-            {{ timeLabel(o.completedAt) }}</span
+            >下單 {{ dateTimeLabel(o.createdAt) }}・出餐
+            {{ dateTimeLabel(o.servedAt) }}・完成
+            {{ dateTimeLabel(o.completedAt) }}</span
           >
           <span class="text-[15px] font-black text-[#e8384f]"
             >${{ o.total }}</span
